@@ -37,6 +37,13 @@ export const Navbar = () => {
                 <Crown className="w-4 h-4 mr-2 text-yellow-500" />
                 Pro Features
               </button>
+
+              <button 
+                className="text-gray-700 hover:text-blue-600 transition-colors"
+                onClick={() => navigate('/fullstack')}
+              >
+                Full Stack
+              </button>
             </div>
           </div>
 
@@ -88,6 +95,16 @@ export const Navbar = () => {
                 >
                   <Crown className="w-4 h-4 mr-2 text-yellow-500" />
                   <span className="font-medium">Pro Features</span>
+                </button>
+              </div>
+
+              {/* Mobile Full Stack */}
+              <div className="px-3 py-2">
+                <button 
+                  className="text-gray-700 w-full text-left font-medium"
+                  onClick={() => navigate('/fullstack')}
+                >
+                  Full Stack
                 </button>
               </div>
               
