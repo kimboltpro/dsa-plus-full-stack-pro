@@ -105,6 +105,79 @@ const OpenRouterChatbot = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Function to clean and format message content
+  const formatMessageContent = (content: string) => {
+    // Remove excessive special characters and clean up text
+    let cleaned = content
+      .replace(/^[#\-\*\`]+\s*/gm, '') // Remove markdown headers and list markers at start of lines
+      .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold markdown
+      .replace(/\*([^*]+)\*/g, '$1') // Remove italic markdown
+      .replace(/`([^`]+)`/g, '$1') // Remove inline code backticks for now, we'll handle code blocks separately
+      .replace(/^\s*[\-\*\+]\s+/gm, '• ') // Convert markdown lists to bullet points
+      .trim();
+
+    return cleaned;
+  };
+
+  // Function to detect and format code blocks
+  const renderFormattedMessage = (content: string) => {
+    // Split content by code blocks (```...```)
+    const parts = content.split(/(```[\s\S]*?```)/);
+    
+    return parts.map((part, index) => {
+      if (part.startsWith('```') && part.endsWith('```')) {
+        // This is a code block
+        const codeContent = part.slice(3, -3).trim();
+        const lines = codeContent.split('\n');
+        const language = lines[0].toLowerCase();
+        const code = lines.slice(language.match(/^(js|javascript|ts|typescript|html|css|python|java|cpp|c)$/) ? 1 : 0).join('\n');
+        
+        return (
+          <div key={index} className="my-4 rounded-xl overflow-hidden bg-gray-900 border border-gray-700">
+            <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span className="text-gray-400 text-xs ml-2 font-mono">{language || 'code'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-gray-400 hover:text-white hover:bg-gray-700"
+                  onClick={() => navigator.clipboard.writeText(code)}
+                >
+                  <Copy className="w-3 h-3" />
+                  <span className="text-xs ml-1">Copy</span>
+                </Button>
+              </div>
+            </div>
+            <div className="p-4 overflow-x-auto">
+              <pre className="text-sm leading-relaxed">
+                <code className="text-green-400 font-mono">{code}</code>
+              </pre>
+            </div>
+          </div>
+        );
+      } else {
+        // Regular text content
+        const cleaned = formatMessageContent(part);
+        if (!cleaned.trim()) return null;
+        
+        return (
+          <div key={index} className="leading-relaxed">
+            {cleaned.split('\n').map((line, lineIndex) => (
+              <p key={lineIndex} className={lineIndex > 0 ? 'mt-2' : ''}>
+                {line.trim() || <br />}
+              </p>
+            ))}
+          </div>
+        );
+      }
+    }).filter(Boolean);
+  };
+
   const saveApiKey = () => {
     localStorage.setItem('openrouter_api_key', apiKey);
     setError('');
@@ -226,23 +299,23 @@ const OpenRouterChatbot = () => {
     <div key={message.id} className={`flex gap-3 mb-6 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
       {message.role === 'assistant' && (
         <div className="flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-            <Bot className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+            <Bot className="w-4 h-4 text-white" />
           </div>
         </div>
       )}
       
-      <div className={`max-w-[80%] ${message.role === 'user' ? 'order-1' : ''}`}>
+      <div className={`max-w-[85%] ${message.role === 'user' ? 'order-1' : ''}`}>
         <div
           className={`p-4 rounded-2xl shadow-sm ${
             message.role === 'user'
               ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white ml-4'
-              : 'bg-white border border-gray-200'
+              : 'bg-white border border-gray-200 shadow-md'
           }`}
         >
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-3">
             <span className="text-xs font-medium opacity-75">
-              {message.role === 'user' ? 'You' : message.model || 'AI Assistant'}
+              {message.role === 'user' ? 'You' : (message.model || 'AI Assistant')}
             </span>
             <span className="text-xs opacity-50">
               {message.timestamp.toLocaleTimeString()}
@@ -250,21 +323,26 @@ const OpenRouterChatbot = () => {
           </div>
           
           <div className="prose prose-sm max-w-none">
-            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{message.content}</pre>
+            {renderFormattedMessage(message.content)}
           </div>
           
           {message.role === 'assistant' && (
-            <div className="flex items-center gap-2 mt-3 pt-2 border-t border-gray-100">
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500 hover:text-gray-700">
+            <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                onClick={() => navigator.clipboard.writeText(message.content)}
+              >
                 <Copy className="w-3 h-3" />
               </Button>
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500 hover:text-green-600">
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500 hover:text-green-600 hover:bg-green-50">
                 <ThumbsUp className="w-3 h-3" />
               </Button>
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500 hover:text-red-600">
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500 hover:text-red-600 hover:bg-red-50">
                 <ThumbsDown className="w-3 h-3" />
               </Button>
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500 hover:text-blue-600">
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50">
                 <RotateCcw className="w-3 h-3" />
               </Button>
             </div>
@@ -274,8 +352,8 @@ const OpenRouterChatbot = () => {
       
       {message.role === 'user' && (
         <div className="flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-            <User className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center shadow-lg">
+            <User className="w-4 h-4 text-white" />
           </div>
         </div>
       )}
@@ -501,14 +579,14 @@ const OpenRouterChatbot = () => {
                           <Bot className="w-8 h-8 text-purple-500" />
                         </div>
                         <h4 className="font-medium text-gray-900 mb-2">Start a conversation!</h4>
-                        <p className="text-gray-600 text-sm">Ask me anything about programming, algorithms, or development.</p>
+                        <p className="text-gray-600 text-sm mb-6">Ask me anything about programming, algorithms, or development.</p>
                         
                         {/* Quick Start Suggestions */}
-                        <div className="mt-6 flex flex-wrap gap-2 justify-center">
+                        <div className="flex flex-wrap gap-2 justify-center">
                           {[
-                            "Teach me JavaScript",
-                            "Explain React hooks", 
-                            "Help debug my code",
+                            "Explain JavaScript variables",
+                            "Help with React components", 
+                            "Debug my code",
                             "System design patterns"
                           ].map((suggestion) => (
                             <Button
@@ -529,13 +607,17 @@ const OpenRouterChatbot = () => {
                         {isLoading && (
                           <div className="flex gap-3">
                             <div className="flex-shrink-0">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-                                <Bot className="w-4 h-4 text-white" />
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                                <Loader2 className="w-4 h-4 animate-spin text-white" />
                               </div>
                             </div>
                             <div className="bg-white border border-gray-200 shadow-sm p-4 rounded-2xl">
                               <div className="flex items-center gap-2">
-                                <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+                                <div className="flex space-x-1">
+                                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
+                                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                </div>
                                 <span className="text-sm text-gray-600">AI is thinking...</span>
                               </div>
                             </div>
@@ -563,15 +645,6 @@ const OpenRouterChatbot = () => {
                         className="min-h-[50px] max-h-32 resize-none bg-white border-gray-200 focus:ring-2 focus:ring-purple-500 rounded-xl"
                         rows={1}
                       />
-                      <div className="absolute bottom-2 right-2 flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                      </div>
                     </div>
                     <Button 
                       onClick={sendMessage} 
