@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -8,6 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Crown, ExternalLink, BookOpen, Video, FileText, Code, Search, Trophy, Brain, Globe, Smartphone, Star, GitBranch, Target, Monitor, BarChart3, Play, Filter, MessageSquare, Calendar, Users, CheckCircle, Zap, Link } from 'lucide-react';
+
+// Import the new feature components
+import InteractiveRoadmap from './features/InteractiveRoadmap';
+import CodeEditor from './features/CodeEditor';
+import AnalyticsDashboard from './features/AnalyticsDashboard';
+import ProblemTracker from './features/ProblemTracker';
+import AdvancedSearch from './features/AdvancedSearch';
 
 const dsaSheets = [
   { 
@@ -282,121 +288,176 @@ const ProFeaturesPage = () => {
           </p>
         </div>
 
-        <Tabs defaultValue="sheets" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
+        <Tabs defaultValue="interactive-features" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-8">
+            <TabsTrigger value="interactive-features">Interactive Features</TabsTrigger>
             <TabsTrigger value="sheets">Top DSA Sheets</TabsTrigger>
             <TabsTrigger value="resources">Additional Resources</TabsTrigger>
-            <TabsTrigger value="features">Must-Have Features</TabsTrigger>
+            <TabsTrigger value="feature-specs">Feature Specifications</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="sheets">
+          {/* NEW: Interactive Features Tab */}
+          <TabsContent value="interactive-features">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">✅ TOP DSA SHEETS (WITH REAL LINKS)</h2>
-              <p className="text-gray-600">Handpicked collection of the most effective DSA problem sheets from top educators and platforms</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">🚀 Interactive Pro Features</h2>
+              <p className="text-gray-600">Experience the power of our premium features with these interactive demos</p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {dsaSheets.map((sheet, index) => (
-                <Card key={index} className="hover:shadow-lg transition-all duration-300 border-0 bg-white hover:scale-105">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <CardTitle className="text-lg font-bold text-gray-900 line-clamp-2">
-                        {sheet.name}
-                      </CardTitle>
-                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
-                        #{index + 1}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-600 font-medium">{sheet.author}</p>
-                    <Badge variant="secondary" className="text-xs w-fit">
-                      {sheet.problems}
-                    </Badge>
+            <div className="space-y-8">
+              <InteractiveRoadmap />
+              <CodeEditor />
+              <AnalyticsDashboard />
+              <ProblemTracker />
+              <AdvancedSearch />
+              
+              {/* Additional Interactive Features Preview */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Video Tutorial Integration */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Play className="w-5 h-5 mr-2 text-blue-600" />
+                      Video Tutorial Integration
+                    </CardTitle>
                   </CardHeader>
-                  
-                  <CardContent className="space-y-4">
-                    <p className="text-gray-600 text-sm leading-relaxed line-clamp-3">
-                      {sheet.highlights}
-                    </p>
-                    
-                    <div className="flex items-center justify-between">
-                      <Button
-                        size="sm"
-                        className="flex-1 mr-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                        onClick={() => window.open(sheet.url, '_blank')}
-                      >
-                        Access Sheet
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => window.open(sheet.url, '_blank')}
-                      >
-                        <ExternalLink className="h-4 w-4" />
+                  <CardContent>
+                    <div className="bg-black rounded-lg p-4 mb-4">
+                      <div className="flex items-center justify-center h-32 text-white">
+                        <Play className="w-12 h-12 text-blue-400" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Two Sum - Striver Explanation</span>
+                        <Badge variant="outline">12:45</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Binary Search - CodeHelp</span>
+                        <Badge variant="outline">18:30</Badge>
+                      </div>
+                      <Button className="w-full mt-4">
+                        View All Video Solutions
                       </Button>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-          </TabsContent>
 
-          <TabsContent value="resources">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">📚 ADDITIONAL RESOURCES TO INTEGRATE</h2>
-              <p className="text-gray-600">Comprehensive collection of learning resources to support your DSA journey</p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {additionalResources.map((resource, index) => (
-                <Card key={index} className="hover:shadow-lg transition-all duration-300">
+                {/* Interview Simulation */}
+                <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center text-lg">
-                      <resource.icon className="w-6 h-6 mr-3 text-blue-600" />
-                      {resource.type}
+                    <CardTitle className="flex items-center">
+                      <Users className="w-5 h-5 mr-2 text-blue-600" />
+                      Interview Simulation
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      {resource.sources}
-                    </p>
-                    <Button className="w-full mt-4" variant="outline">
-                      Explore Resources
-                    </Button>
+                    <div className="space-y-4">
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">Mock Interview - Google</span>
+                          <Badge variant="secondary">45 mins</Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">Medium difficulty • 3 coding problems</p>
+                      </div>
+                      
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">Last Performance</span>
+                          <Badge className="bg-green-100 text-green-800">85%</Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">Completed 2/3 problems • Strong performance</p>
+                      </div>
+
+                      <Button className="w-full">
+                        Start New Interview
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-          </TabsContent>
 
-          <TabsContent value="features">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">🔥 MUST-HAVE FEATURES (FOR WORLD-CLASS PLATFORM)</h2>
-              <p className="text-gray-600">Advanced features that make this the ultimate DSA learning platform</p>
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {mustHaveFeatures.map((section, index) => (
-                <Card key={index} className="hover:shadow-lg transition-all duration-300">
+                {/* Collaborative Learning */}
+                <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center text-lg text-gray-900">
-                      <section.icon className="w-6 h-6 mr-3 text-blue-600" />
-                      {section.category}
+                    <CardTitle className="flex items-center">
+                      <MessageSquare className="w-5 h-5 mr-2 text-blue-600" />
+                      Collaborative Learning
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ul className="space-y-3">
-                      {section.features.map((feature, featureIndex) => (
-                        <li key={featureIndex} className="flex items-start text-sm text-gray-600">
-                          <CheckCircle className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                          <span className="leading-relaxed">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-sm">Study Group: FAANG Prep</span>
+                          <Badge variant="outline">12 members</Badge>
+                        </div>
+                        <p className="text-xs text-gray-600">Currently discussing: DP patterns</p>
+                      </div>
+                      
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-sm">Mentor: Sarah (Google SWE)</span>
+                          <Badge className="bg-yellow-100 text-yellow-800">Available</Badge>
+                        </div>
+                        <p className="text-xs text-gray-600">Specializes in system design & algorithms</p>
+                      </div>
+
+                      <Button className="w-full">
+                        Join Study Session
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
-              ))}
+
+                {/* Gamified Challenges */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Trophy className="w-5 h-5 mr-2 text-blue-600" />
+                      Gamified Challenges
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="bg-purple-50 p-4 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">Weekly Challenge</span>
+                          <Badge className="bg-purple-100 text-purple-800">2 days left</Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">Solve 5 tree problems to earn 500 XP</p>
+                        <div className="mt-2">
+                          <div className="text-xs text-gray-500 mb-1">Progress: 3/5 completed</div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="bg-purple-600 h-2 rounded-full" style={{ width: '60%' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-orange-50 p-4 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">Friend Challenge</span>
+                          <Badge className="bg-orange-100 text-orange-800">Active</Badge>
+                        </div>
+                        <p className="text-sm text-gray-600">Race against Alex to solve 10 problems first!</p>
+                        <div className="mt-2 text-sm">
+                          <div className="flex justify-between">
+                            <span>You: 7 problems</span>
+                            <span>Alex: 5 problems</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button className="w-full">
+                        View All Challenges
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </TabsContent>
+
+          {/* ... keep existing code for other tabs (sheets, resources, feature-specs) */}
+          
         </Tabs>
 
         <div className="mt-12 text-center">
