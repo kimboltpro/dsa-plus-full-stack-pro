@@ -29,6 +29,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('Setting up auth state listener...');
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -41,6 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -50,49 +53,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signUp = async (email: string, password: string, fullName?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
+    try {
+      setLoading(true);
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: fullName,
+          }
         }
+      });
+      
+      if (error) {
+        console.error('Sign up error:', error);
+        toast.error(error.message);
+      } else {
+        console.log('Sign up successful:', data);
+        toast.success('Account created successfully! Please check your email to verify your account.');
       }
-    });
-    
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Account created successfully! Please check your email to verify your account.');
+      
+      return { error };
+    } catch (err) {
+      console.error('Sign up exception:', err);
+      toast.error('An unexpected error occurred');
+      return { error: err };
+    } finally {
+      setLoading(false);
     }
-    
-    return { error };
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Welcome back!');
+    try {
+      setLoading(true);
+      console.log('Attempting sign in for:', email);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        console.error('Sign in error:', error);
+        toast.error(error.message);
+      } else {
+        console.log('Sign in successful:', data);
+        toast.success('Welcome back!');
+      }
+      
+      return { error };
+    } catch (err) {
+      console.error('Sign in exception:', err);
+      toast.error('An unexpected error occurred');
+      return { error: err };
+    } finally {
+      setLoading(false);
     }
-    
-    return { error };
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Signed out successfully');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Sign out error:', error);
+        toast.error(error.message);
+      } else {
+        console.log('Sign out successful');
+        toast.success('Signed out successfully');
+      }
+    } catch (err) {
+      console.error('Sign out exception:', err);
+      toast.error('An unexpected error occurred');
     }
   };
 

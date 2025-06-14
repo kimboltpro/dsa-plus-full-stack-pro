@@ -2,9 +2,13 @@
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-gray-200 z-50">
@@ -29,10 +33,23 @@ export const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost">Sign In</Button>
-            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-              Get Started
-            </Button>
+            {user ? (
+              <Button onClick={() => navigate('/dashboard')}>
+                Dashboard
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => navigate('/auth')}>
+                  Sign In
+                </Button>
+                <Button 
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  onClick={() => navigate('/auth')}
+                >
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -55,8 +72,30 @@ export const Navbar = () => {
               <a href="#resources" className="block px-3 py-2 text-gray-700 hover:text-blue-600">Resources</a>
               <a href="#roadmap" className="block px-3 py-2 text-gray-700 hover:text-blue-600">Roadmap</a>
               <div className="pt-4 pb-2 space-y-2">
-                <Button variant="ghost" className="w-full">Sign In</Button>
-                <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600">Get Started</Button>
+                {user ? (
+                  <Button 
+                    className="w-full"
+                    onClick={() => navigate('/dashboard')}
+                  >
+                    Dashboard
+                  </Button>
+                ) : (
+                  <>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full"
+                      onClick={() => navigate('/auth')}
+                    >
+                      Sign In
+                    </Button>
+                    <Button 
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
+                      onClick={() => navigate('/auth')}
+                    >
+                      Get Started
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
