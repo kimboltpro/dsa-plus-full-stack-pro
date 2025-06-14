@@ -12,6 +12,7 @@ import Dashboard from "./components/dashboard/Dashboard";
 import SheetsPage from "./components/sheets/SheetsPage";
 import RoadmapPage from "./components/roadmap/RoadmapPage";
 import PlaygroundPage from "./components/playground/PlaygroundPage";
+import ProFeaturesPage from "./components/pro/ProFeaturesPage";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/sheets" element={<SheetsPage />} />
             <Route path="/roadmap" element={<RoadmapPage />} />
             <Route path="/playground" element={<PlaygroundPage />} />
+            <Route path="/pro" element={<ProFeaturesPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

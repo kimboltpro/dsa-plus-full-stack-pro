@@ -122,8 +122,12 @@ export const Navbar = () => {
                                 <li>• AI-Powered Hints & Solutions</li>
                                 <li>• Mobile App & Offline Mode</li>
                               </ul>
-                              <Button size="sm" className="mt-3 w-full bg-gradient-to-r from-blue-600 to-purple-600">
-                                Upgrade to Pro
+                              <Button 
+                                size="sm" 
+                                className="mt-3 w-full bg-gradient-to-r from-blue-600 to-purple-600"
+                                onClick={() => navigate('/pro')}
+                              >
+                                View All Pro Features
                               </Button>
                             </div>
                           </div>
@@ -178,10 +182,13 @@ export const Navbar = () => {
               
               {/* Mobile Pro Features */}
               <div className="px-3 py-2">
-                <div className="flex items-center text-gray-700 mb-2">
+                <button 
+                  className="flex items-center text-gray-700 mb-2 w-full text-left"
+                  onClick={() => navigate('/pro')}
+                >
                   <Crown className="w-4 h-4 mr-2 text-yellow-500" />
                   <span className="font-medium">Pro Features</span>
-                </div>
+                </button>
                 <div className="ml-6 space-y-2 text-sm">
                   <div className="text-gray-600">✅ Top DSA Sheets</div>
                   <div className="text-gray-600">📚 Additional Resources</div>
