@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -33,7 +34,9 @@ import {
   Lock,
   Layers,
   MessageCircle,
-  Rocket
+  Rocket,
+  Sparkles,
+  Zap
 } from 'lucide-react';
 
 const fullStackResources = {
@@ -784,18 +787,22 @@ const FullStackPage = () => {
 
   const sections = [
     { 
-      id: 'interactive-builder', 
-      title: '🚀 Interactive Project Builder', 
-      icon: Rocket, 
-      component: <InteractiveProjectBuilder />,
-      description: 'Build real projects with step-by-step tutorials and live code environments'
-    },
-    { 
-      id: 'ai-assistant', 
-      title: '🤖 AI Assistant', 
+      id: 'chat-assistance', 
+      title: '🤖✨ Chat Assistance', 
       icon: MessageCircle, 
       component: <OpenRouterChatbot />,
-      description: 'Get help from 350+ AI models for coding, debugging, and learning'
+      description: 'Get instant help from 350+ AI models for coding, debugging, and learning',
+      featured: true,
+      magicGradient: 'from-purple-500 via-pink-500 to-red-500'
+    },
+    { 
+      id: 'interactive-projects', 
+      title: '🚀⚡ Interactive Projects', 
+      icon: Rocket, 
+      component: <InteractiveProjectBuilder />,
+      description: 'Build real projects with step-by-step tutorials and live code environments',
+      featured: true,
+      magicGradient: 'from-blue-500 via-cyan-500 to-teal-500'
     },
     { 
       id: 'frontend', 
@@ -869,6 +876,46 @@ const FullStackPage = () => {
           </p>
         </div>
 
+        {/* Featured Magic Sections */}
+        <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {sections.filter(section => section.featured).map((section) => (
+            <div
+              key={section.id}
+              className={`relative p-1 rounded-2xl bg-gradient-to-r ${section.magicGradient} shadow-2xl hover:shadow-3xl transition-all duration-300 group`}
+            >
+              <div className="bg-white rounded-xl p-6 h-full">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`p-3 rounded-xl bg-gradient-to-r ${section.magicGradient} text-white shadow-lg`}>
+                    <section.icon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">{section.title}</h3>
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-yellow-500" />
+                      <span className="text-sm font-medium text-yellow-600">Featured</span>
+                      <Zap className="w-4 h-4 text-purple-500" />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-gray-600 mb-4">{section.description}</p>
+                <Button 
+                  className={`w-full bg-gradient-to-r ${section.magicGradient} hover:opacity-90 text-white font-semibold py-3 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200`}
+                  onClick={() => {
+                    const element = document.getElementById(`tab-${section.id}`);
+                    element?.click();
+                  }}
+                >
+                  <span className="flex items-center gap-2">
+                    Get Started
+                    <Sparkles className="w-4 h-4" />
+                  </span>
+                </Button>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl"></div>
+            </div>
+          ))}
+        </div>
+
         {/* Search and Filters */}
         <div className="mb-8 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex flex-col lg:flex-row gap-4 items-center">
@@ -908,17 +955,23 @@ const FullStackPage = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="interactive-builder" className="w-full">
+        <Tabs defaultValue="chat-assistance" className="w-full">
           <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10 mb-8">
             {sections.map((section) => (
               <TabsTrigger 
                 key={section.id} 
                 value={section.id}
-                className="text-xs lg:text-sm"
+                id={`tab-${section.id}`}
+                className={`text-xs lg:text-sm ${
+                  section.featured 
+                    ? `bg-gradient-to-r ${section.magicGradient} text-white data-[state=active]:text-white data-[state=active]:shadow-lg` 
+                    : ''
+                }`}
               >
                 <section.icon className="w-4 h-4 mr-1 lg:mr-2" />
-                <span className="hidden lg:inline">{section.title.split(' ')[1]}</span>
+                <span className="hidden lg:inline">{section.title.split(' ')[1] || section.title.split(' ')[0]}</span>
                 <span className="lg:hidden">{section.title.split(' ')[0]}</span>
+                {section.featured && <Sparkles className="w-3 h-3 ml-1" />}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -926,12 +979,24 @@ const FullStackPage = () => {
           {sections.map((section) => (
             <TabsContent key={section.id} value={section.id}>
               <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">{section.title}</h2>
+                <div className="flex items-center gap-3 mb-2">
+                  <h2 className="text-2xl font-bold text-gray-900">{section.title}</h2>
+                  {section.featured && (
+                    <Badge className={`bg-gradient-to-r ${section.magicGradient} text-white px-3 py-1`}>
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      Featured
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-gray-600">{section.description}</p>
               </div>
               
               {section.component ? (
-                section.component
+                <div className={section.featured ? `p-1 rounded-2xl bg-gradient-to-r ${section.magicGradient}` : ''}>
+                  <div className={section.featured ? 'bg-white rounded-xl p-6' : ''}>
+                    {section.component}
+                  </div>
+                </div>
               ) : (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

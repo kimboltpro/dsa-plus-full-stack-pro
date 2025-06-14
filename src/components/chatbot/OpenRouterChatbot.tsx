@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   MessageCircle, 
   Send, 
@@ -20,7 +20,13 @@ import {
   X,
   Eye,
   EyeOff,
-  Loader2
+  Loader2,
+  Sparkles,
+  Copy,
+  ThumbsUp,
+  ThumbsDown,
+  RotateCcw,
+  Plus
 } from 'lucide-react';
 
 interface OpenRouterModel {
@@ -216,27 +222,107 @@ const OpenRouterChatbot = () => {
     return 'bg-gray-100 text-gray-800';
   };
 
+  const renderMessage = (message: ChatMessage) => (
+    <div key={message.id} className={`flex gap-3 mb-6 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+      {message.role === 'assistant' && (
+        <div className="flex-shrink-0">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+            <Bot className="w-4 h-4" />
+          </div>
+        </div>
+      )}
+      
+      <div className={`max-w-[80%] ${message.role === 'user' ? 'order-1' : ''}`}>
+        <div
+          className={`p-4 rounded-2xl shadow-sm ${
+            message.role === 'user'
+              ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white ml-4'
+              : 'bg-white border border-gray-200'
+          }`}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-medium opacity-75">
+              {message.role === 'user' ? 'You' : message.model || 'AI Assistant'}
+            </span>
+            <span className="text-xs opacity-50">
+              {message.timestamp.toLocaleTimeString()}
+            </span>
+          </div>
+          
+          <div className="prose prose-sm max-w-none">
+            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{message.content}</pre>
+          </div>
+          
+          {message.role === 'assistant' && (
+            <div className="flex items-center gap-2 mt-3 pt-2 border-t border-gray-100">
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500 hover:text-gray-700">
+                <Copy className="w-3 h-3" />
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500 hover:text-green-600">
+                <ThumbsUp className="w-3 h-3" />
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500 hover:text-red-600">
+                <ThumbsDown className="w-3 h-3" />
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500 hover:text-blue-600">
+                <RotateCcw className="w-3 h-3" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {message.role === 'user' && (
+        <div className="flex-shrink-0">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+            <User className="w-4 h-4" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <h3 className="text-2xl font-bold text-gray-900 mb-3">🤖 AI Assistant (OpenRouter)</h3>
+        <div className="flex items-center justify-center gap-3 mb-3">
+          <div className="p-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg">
+            <MessageCircle className="w-6 h-6" />
+          </div>
+          <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            Chat Assistance
+          </h3>
+          <Sparkles className="w-6 h-6 text-yellow-500" />
+        </div>
         <p className="text-gray-600 max-w-2xl mx-auto">
           Access 350+ AI models through OpenRouter. Get help with coding, algorithms, and development questions.
         </p>
       </div>
 
       <Tabs defaultValue="chat" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-          <TabsTrigger value="models">Models</TabsTrigger>
-          <TabsTrigger value="chat">Chat</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 bg-gradient-to-r from-gray-50 to-gray-100">
+          <TabsTrigger value="settings" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white">
+            <Settings className="w-4 h-4 mr-2" />
+            Settings
+          </TabsTrigger>
+          <TabsTrigger value="models" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white">
+            <Bot className="w-4 h-4 mr-2" />
+            Models
+          </TabsTrigger>
+          <TabsTrigger value="chat" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white">
+            <MessageCircle className="w-4 h-4 mr-2" />
+            Chat
+          </TabsTrigger>
         </TabsList>
 
+        {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50/50">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-gray-800">
+                <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                  <Settings className="w-4 h-4" />
+                </div>
                 OpenRouter Configuration
               </CardTitle>
             </CardHeader>
@@ -252,7 +338,7 @@ const OpenRouterChatbot = () => {
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
                       placeholder="Enter your OpenRouter API key"
-                      className="pr-10"
+                      className="pr-10 bg-white border-gray-200 focus:ring-2 focus:ring-purple-500"
                     />
                     <button
                       type="button"
@@ -262,18 +348,23 @@ const OpenRouterChatbot = () => {
                       {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  <Button onClick={saveApiKey}>Save</Button>
+                  <Button 
+                    onClick={saveApiKey}
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                  >
+                    Save
+                  </Button>
                 </div>
                 <p className="text-sm text-gray-500 mt-2">
                   Get your free API key from{' '}
-                  <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                  <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:underline font-medium">
                     OpenRouter.ai
                   </a>
                 </p>
               </div>
 
               {apiKey && (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
                   <div className="flex items-center gap-2 text-green-800">
                     <Zap className="w-4 h-4" />
                     <span className="font-medium">API Key Configured</span>
@@ -285,7 +376,7 @@ const OpenRouterChatbot = () => {
               )}
 
               {error && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl">
                   <p className="text-sm text-red-800">{error}</p>
                 </div>
               )}
@@ -293,15 +384,18 @@ const OpenRouterChatbot = () => {
           </Card>
         </TabsContent>
 
+        {/* Models Tab */}
         <TabsContent value="models" className="space-y-4">
-          <Card>
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50/50">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Bot className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2 text-gray-800">
+                  <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                    <Bot className="w-4 h-4" />
+                  </div>
                   Available Models ({filteredModels.length})
                 </CardTitle>
-                {modelsLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {modelsLoading && <Loader2 className="w-4 h-4 animate-spin text-purple-500" />}
               </div>
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -310,10 +404,14 @@ const OpenRouterChatbot = () => {
                     placeholder="Search models..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 bg-white border-gray-200 focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
-                <Button variant="outline" onClick={fetchModels}>
+                <Button 
+                  variant="outline" 
+                  onClick={fetchModels}
+                  className="border-purple-200 text-purple-600 hover:bg-purple-50"
+                >
                   Refresh
                 </Button>
               </div>
@@ -329,8 +427,10 @@ const OpenRouterChatbot = () => {
                 {filteredModels.map((model) => (
                   <div
                     key={model.id}
-                    className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                      selectedModel?.id === model.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                    className={`p-4 border rounded-xl cursor-pointer transition-all hover:shadow-md ${
+                      selectedModel?.id === model.id 
+                        ? 'border-purple-300 bg-gradient-to-r from-purple-50 to-pink-50 shadow-lg' 
+                        : 'border-gray-200 hover:border-purple-200'
                     }`}
                     onClick={() => setSelectedModel(model)}
                   >
@@ -369,16 +469,19 @@ const OpenRouterChatbot = () => {
           </Card>
         </TabsContent>
 
+        {/* Chat Tab */}
         <TabsContent value="chat" className="space-y-4">
-          <Card>
-            <CardHeader>
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50/50">
+            <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <MessageCircle className="w-5 h-5" />
-                  AI Chat Assistant
+                <CardTitle className="flex items-center gap-2 text-gray-800">
+                  <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                    <MessageCircle className="w-4 h-4" />
+                  </div>
+                  Chat Assistance
                 </CardTitle>
                 {selectedModel && (
-                  <Badge className={getModelBadgeColor(selectedModel.id)}>
+                  <Badge className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border-purple-200">
                     {selectedModel.name}
                   </Badge>
                 )}
@@ -390,51 +493,50 @@ const OpenRouterChatbot = () => {
             <CardContent>
               {selectedModel ? (
                 <div className="space-y-4">
-                  <div className="h-96 overflow-y-auto border rounded-lg p-4 bg-gray-50">
+                  {/* Chat Messages Area */}
+                  <div className="h-[500px] overflow-y-auto bg-gradient-to-b from-gray-50/50 to-white rounded-xl p-4 border border-gray-100">
                     {messages.length === 0 ? (
-                      <div className="text-center text-gray-500 py-8">
-                        <Bot className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                        <p>Start a conversation! Ask me anything about programming, algorithms, or development.</p>
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 flex items-center justify-center">
+                          <Bot className="w-8 h-8 text-purple-500" />
+                        </div>
+                        <h4 className="font-medium text-gray-900 mb-2">Start a conversation!</h4>
+                        <p className="text-gray-600 text-sm">Ask me anything about programming, algorithms, or development.</p>
+                        
+                        {/* Quick Start Suggestions */}
+                        <div className="mt-6 flex flex-wrap gap-2 justify-center">
+                          {[
+                            "Teach me JavaScript",
+                            "Explain React hooks", 
+                            "Help debug my code",
+                            "System design patterns"
+                          ].map((suggestion) => (
+                            <Button
+                              key={suggestion}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setInputMessage(suggestion)}
+                              className="text-xs border-purple-200 text-purple-600 hover:bg-purple-50"
+                            >
+                              {suggestion}
+                            </Button>
+                          ))}
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {messages.map((message) => (
-                          <div
-                            key={message.id}
-                            className={`flex gap-3 ${
-                              message.role === 'user' ? 'justify-end' : 'justify-start'
-                            }`}
-                          >
-                            <div
-                              className={`max-w-[80%] p-3 rounded-lg ${
-                                message.role === 'user'
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-white border shadow-sm'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 mb-1">
-                                {message.role === 'user' ? (
-                                  <User className="w-4 h-4" />
-                                ) : (
-                                  <Bot className="w-4 h-4" />
-                                )}
-                                <span className="text-xs opacity-75">
-                                  {message.role === 'user' ? 'You' : message.model || 'Assistant'}
-                                </span>
-                              </div>
-                              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                              <p className="text-xs opacity-50 mt-1">
-                                {message.timestamp.toLocaleTimeString()}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                        {messages.map(renderMessage)}
                         {isLoading && (
-                          <div className="flex justify-start">
-                            <div className="bg-white border shadow-sm p-3 rounded-lg">
+                          <div className="flex gap-3">
+                            <div className="flex-shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
+                                <Bot className="w-4 h-4 text-white" />
+                              </div>
+                            </div>
+                            <div className="bg-white border border-gray-200 shadow-sm p-4 rounded-2xl">
                               <div className="flex items-center gap-2">
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                <span className="text-sm text-gray-600">Thinking...</span>
+                                <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+                                <span className="text-sm text-gray-600">AI is thinking...</span>
                               </div>
                             </div>
                           </div>
@@ -444,34 +546,69 @@ const OpenRouterChatbot = () => {
                     )}
                   </div>
                   
-                  <div className="flex gap-2">
-                    <Input
-                      value={inputMessage}
-                      onChange={(e) => setInputMessage(e.target.value)}
-                      placeholder="Ask me anything about programming, DSA, or development..."
-                      onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-                      disabled={isLoading}
-                    />
-                    <Button onClick={sendMessage} disabled={isLoading || !inputMessage.trim()}>
+                  {/* Message Input Area */}
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1 relative">
+                      <Textarea
+                        value={inputMessage}
+                        onChange={(e) => setInputMessage(e.target.value)}
+                        placeholder="Ask anything about programming, DSA, or development..."
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            sendMessage();
+                          }
+                        }}
+                        disabled={isLoading}
+                        className="min-h-[50px] max-h-32 resize-none bg-white border-gray-200 focus:ring-2 focus:ring-purple-500 rounded-xl"
+                        rows={1}
+                      />
+                      <div className="absolute bottom-2 right-2 flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={sendMessage} 
+                      disabled={isLoading || !inputMessage.trim()}
+                      className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl h-12 w-12 p-0"
+                    >
                       <Send className="w-4 h-4" />
                     </Button>
                   </div>
                   
                   {messages.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setMessages([])}
-                      className="w-full"
-                    >
-                      Clear Chat History
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setMessages([])}
+                        className="flex-1 text-gray-600 border-gray-200 hover:bg-gray-50"
+                      >
+                        Clear Chat
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-gray-600 border-gray-200 hover:bg-gray-50"
+                      >
+                        Export Chat
+                      </Button>
+                    </div>
                   )}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Settings className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <p>Configure your API key and select a model to start chatting</p>
+                <div className="text-center py-12 text-gray-500">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-gray-100 to-gray-200 flex items-center justify-center">
+                    <Settings className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="font-medium mb-2">Setup Required</p>
+                  <p className="text-sm">Configure your API key and select a model to start chatting</p>
                 </div>
               )}
             </CardContent>
