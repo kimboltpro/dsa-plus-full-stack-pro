@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Menu, X, Crown } from "lucide-react";
+import { Menu, X, Crown, Code2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,10 +39,14 @@ export const Navbar = () => {
               </button>
 
               <button 
-                className="text-gray-700 hover:text-blue-600 transition-colors"
+                className="flex items-center text-gray-700 hover:text-blue-600 transition-colors group"
                 onClick={() => navigate('/fullstack')}
               >
-                Full Stack
+                <div className="relative mr-2">
+                  <Code2 className="w-4 h-4 text-emerald-500 group-hover:text-emerald-600 transition-colors" />
+                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full opacity-80"></div>
+                </div>
+                <span className="font-medium">Full Stack</span>
               </button>
             </div>
           </div>
@@ -101,10 +105,14 @@ export const Navbar = () => {
               {/* Mobile Full Stack */}
               <div className="px-3 py-2">
                 <button 
-                  className="text-gray-700 w-full text-left font-medium"
+                  className="flex items-center text-gray-700 w-full text-left group"
                   onClick={() => navigate('/fullstack')}
                 >
-                  Full Stack
+                  <div className="relative mr-2">
+                    <Code2 className="w-4 h-4 text-emerald-500 group-hover:text-emerald-600 transition-colors" />
+                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full opacity-80"></div>
+                  </div>
+                  <span className="font-medium">Full Stack</span>
                 </button>
               </div>
               
