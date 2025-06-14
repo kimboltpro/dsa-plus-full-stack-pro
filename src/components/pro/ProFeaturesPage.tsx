@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Crown, ExternalLink, BookOpen, Video, FileText, Code, Search, Trophy, Brain, Globe, Smartphone, Star, GitBranch, Target, Monitor, BarChart3, Play, Filter, MessageSquare, Calendar, Users, CheckCircle, Zap, Link, TrendingUp, Clock, Award, User, Eye } from 'lucide-react';
+import { Crown, ExternalLink, BookOpen, Video, FileText, Code, Search, Trophy, Brain, Globe, Smartphone, Star, GitBranch, Target, Monitor, BarChart3, Play, Filter, MessageSquare, Calendar, Users, CheckCircle, Zap, Link, TrendingUp, Clock, Award, User, Eye, Wrench } from 'lucide-react';
 
 // Import the new feature components
 import InteractiveRoadmap from './features/InteractiveRoadmap';
@@ -14,6 +14,7 @@ import CodeEditor from './features/CodeEditor';
 import AnalyticsDashboard from './features/AnalyticsDashboard';
 import ProblemTracker from './features/ProblemTracker';
 import AdvancedSearch from './features/AdvancedSearch';
+import DSAToolkit from './features/DSAToolkit';
 
 const dsaSheets = [
   { 
@@ -392,8 +393,9 @@ const ProFeaturesPage = () => {
         </div>
 
         <Tabs defaultValue="interactive-features" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8">
+          <TabsList className="grid w-full grid-cols-5 mb-8">
             <TabsTrigger value="interactive-features">Interactive Features</TabsTrigger>
+            <TabsTrigger value="dsa-toolkit">DSA Toolkit</TabsTrigger>
             <TabsTrigger value="sheets">Top DSA Sheets</TabsTrigger>
             <TabsTrigger value="resources">Additional Resources</TabsTrigger>
             <TabsTrigger value="feature-specs">Feature Specifications</TabsTrigger>
@@ -557,6 +559,11 @@ const ProFeaturesPage = () => {
                 </Card>
               </div>
             </div>
+          </TabsContent>
+
+          {/* DSA Toolkit Tab */}
+          <TabsContent value="dsa-toolkit">
+            <DSAToolkit />
           </TabsContent>
 
           {/* Top DSA Sheets Tab - Enhanced Design */}
@@ -877,6 +884,10 @@ const ProFeaturesPage = () => {
                 <div className="flex items-center">
                   <Link className="w-5 h-5 text-blue-500 mr-3" />
                   <span className="text-blue-800">API integration with popular IDEs</span>
+                </div>
+                <div className="flex items-center">
+                  <Wrench className="w-5 h-5 text-blue-500 mr-3" />
+                  <span className="text-blue-800">Customizable UI and theme options</span>
                 </div>
               </div>
             </div>
