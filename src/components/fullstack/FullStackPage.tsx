@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -8,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import InteractiveProjectBuilder from './InteractiveProjectBuilder';
+import OpenRouterChatbot from '../chatbot/OpenRouterChatbot';
 import { 
   Monitor, 
   Server, 
@@ -30,7 +31,9 @@ import {
   Database,
   Settings,
   Lock,
-  Layers
+  Layers,
+  MessageCircle,
+  Rocket
 } from 'lucide-react';
 
 const fullStackResources = {
@@ -781,6 +784,20 @@ const FullStackPage = () => {
 
   const sections = [
     { 
+      id: 'interactive-builder', 
+      title: '🚀 Interactive Project Builder', 
+      icon: Rocket, 
+      component: <InteractiveProjectBuilder />,
+      description: 'Build real projects with step-by-step tutorials and live code environments'
+    },
+    { 
+      id: 'ai-assistant', 
+      title: '🤖 AI Assistant', 
+      icon: MessageCircle, 
+      component: <OpenRouterChatbot />,
+      description: 'Get help from 350+ AI models for coding, debugging, and learning'
+    },
+    { 
       id: 'frontend', 
       title: '🌐 Frontend Resources', 
       icon: Monitor, 
@@ -891,8 +908,8 @@ const FullStackPage = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="frontend" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 mb-8">
+        <Tabs defaultValue="interactive-builder" className="w-full">
+          <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10 mb-8">
             {sections.map((section) => (
               <TabsTrigger 
                 key={section.id} 
@@ -913,15 +930,21 @@ const FullStackPage = () => {
                 <p className="text-gray-600">{section.description}</p>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filterResources(section.data).map(renderResourceCard)}
-              </div>
-              
-              {filterResources(section.data).length === 0 && (
-                <div className="text-center py-12">
-                  <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No resources found matching your criteria.</p>
-                </div>
+              {section.component ? (
+                section.component
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {filterResources(section.data || []).map(renderResourceCard)}
+                  </div>
+                  
+                  {filterResources(section.data || []).length === 0 && (
+                    <div className="text-center py-12">
+                      <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500">No resources found matching your criteria.</p>
+                    </div>
+                  )}
+                </>
               )}
             </TabsContent>
           ))}
@@ -945,7 +968,7 @@ const FullStackPage = () => {
         <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
             <div className="text-2xl font-bold text-blue-600">
-              {Object.values(fullStackResources).flat().length}
+              {Object.values(fullStackResources).flat().length + 6}
             </div>
             <div className="text-sm text-blue-700">Total Resources</div>
           </div>
