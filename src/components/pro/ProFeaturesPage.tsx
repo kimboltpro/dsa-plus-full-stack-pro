@@ -7,23 +7,93 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Crown, ExternalLink, BookOpen, Video, FileText, Code, Search, Trophy, Brain, Globe, Smartphone, Star } from 'lucide-react';
+import { Crown, ExternalLink, BookOpen, Video, FileText, Code, Search, Trophy, Brain, Globe, Smartphone, Star, GitBranch, Target, Monitor, BarChart3, Play, Filter, MessageSquare, Calendar, Users, CheckCircle, Zap, Link } from 'lucide-react';
 
 const dsaSheets = [
-  { name: "Striver's SDE Sheet", author: "Take U Forward", highlights: "79 handpicked problems for interviews", url: "https://takeuforward.org/interviews/strivers-sde-sheet-top-coding-interview-problems/" },
-  { name: "Fraz Sheet", author: "Fraz (GitHub)", highlights: "Topic-wise + difficulty-wise curation", url: "https://docs.google.com/spreadsheets/d/1-wKcV99KtO91dXdPkwmXGTdtyxAfk1mbPkQojjSZ0Ie" },
-  { name: "Love Babbar 450 DSA Sheet", author: "Love Babbar / GFG", highlights: "One of the most followed sheets for placement", url: "https://drive.google.com/file/d/1FMdN_OCfOI0iAeDlqswCiC2DZzD4nPsb/view" },
-  { name: "TUF Sheet (Take U Forward)", author: "Raj Vikramaditya", highlights: "Covers patterns & intuition with YouTube links", url: "https://takeuforward.org/strivers-a2z-dsa-course/strivers-a2z-dsa-course-sheet-2/" },
-  { name: "SDE Sheet by Raj Vikramaditya", author: "TUF", highlights: "Focus on patterns (Sliding window, DP, etc.)", url: "https://takeuforward.org/" },
-  { name: "GFG Top 100 Interview Questions", author: "GeeksforGeeks", highlights: "Company-tagged questions", url: "https://www.geeksforgeeks.org/top-100-data-structure-and-algorithms-dsa-interview-questions-topic-wise/" },
-  { name: "GFG Must-Do 75/150", author: "GeeksforGeeks", highlights: "Very popular for quick revision", url: "https://www.geeksforgeeks.org/must-do-coding-questions-for-companies-like-amazon-microsoft-adobe/" },
-  { name: "NeetCode Blind 75 / 150", author: "Neetcode.io", highlights: "Leetcode-style structured sheet", url: "https://neetcode.io/practice" },
-  { name: "Coding Ninjas Problem List", author: "CN Studio", highlights: "Structured by course modules", url: "https://www.codingninjas.com/" },
-  { name: "Leetcode Top Interview Questions", author: "Leetcode", highlights: "Actual curated problems asked by FAANG", url: "https://leetcode.com/explore/interview/card/top-interview-questions-easy/" },
-  { name: "Microsoft, Amazon, Google tagged sets", author: "GFG/Leetcode", highlights: "Company-specific sets", url: "https://leetcode.com/company/" },
-  { name: "Scaler Academy DSA Tracks", author: "Scaler", highlights: "Their syllabus sheets & modules", url: "https://www.scaler.com/" },
-  { name: "CS50 Problem Sets", author: "Harvard (for basics)", highlights: "Brilliant for foundation", url: "https://cs50.harvard.edu/" },
-  { name: "MIT OCW Algorithms Problem Sets", author: "MIT OpenCourseWare", highlights: "Gold-standard academic DSA resources", url: "https://ocw.mit.edu/" }
+  { 
+    name: "Striver's SDE Sheet", 
+    author: "Take U Forward", 
+    highlights: "79 handpicked problems for interviews", 
+    url: "https://takeuforward.org/interviews/strivers-sde-sheet-top-coding-interview-problems/",
+    problems: "79 problems"
+  },
+  { 
+    name: "Fraz Sheet", 
+    author: "Fraz (GitHub)", 
+    highlights: "Topic-wise + difficulty-wise curation", 
+    url: "https://github.com/godugushruthi/fraz-dsa-sheet",
+    problems: "Topic-wise"
+  },
+  { 
+    name: "Love Babbar 450 DSA Sheet", 
+    author: "Love Babbar / GFG", 
+    highlights: "One of the most followed sheets for placement", 
+    url: "https://github.com/sakshamceo/DSA-450-Quest-LOVE-BABBAR/blob/main/LOVE%20BABBAR%20450%20DSA%20Questions.md",
+    problems: "450 problems"
+  },
+  { 
+    name: "TUF Sheet (Take U Forward)", 
+    author: "Raj Vikramaditya", 
+    highlights: "Covers patterns & intuition with YouTube links", 
+    url: "https://takeuforward.org/strivers-a2z-dsa-course/strivers-a2z-dsa-course-sheet-2/",
+    problems: "A2Z Course"
+  },
+  { 
+    name: "GFG Top 100 Interview Questions", 
+    author: "GeeksforGeeks", 
+    highlights: "Company-tagged questions", 
+    url: "https://www.geeksforgeeks.org/top-100-data-structure-and-algorithms-dsa-interview-questions-topic-wise/",
+    problems: "100 problems"
+  },
+  { 
+    name: "GFG Must-Do 75/150", 
+    author: "GeeksforGeeks", 
+    highlights: "Very popular for quick revision", 
+    url: "https://www.geeksforgeeks.org/most-asked-75-coding-problems/",
+    problems: "75 problems"
+  },
+  { 
+    name: "NeetCode Blind 75 / 150", 
+    author: "Neetcode.io", 
+    highlights: "Leetcode-style structured sheet", 
+    url: "https://neetcode.io/practice?tab=blind75",
+    problems: "75/150 problems"
+  },
+  { 
+    name: "Coding Ninjas Problem List", 
+    author: "CN Studio", 
+    highlights: "Structured by course modules", 
+    url: "https://www.naukri.com/code360/problem-lists/ninjas-sde-sheet",
+    problems: "SDE Sheet"
+  },
+  { 
+    name: "Leetcode Top Interview Questions", 
+    author: "Leetcode", 
+    highlights: "Actual curated problems asked by FAANG", 
+    url: "https://leetcode.com/studyplan/leetcode-75/",
+    problems: "75 problems"
+  },
+  { 
+    name: "Microsoft, Amazon, Google tagged sets", 
+    author: "GFG/Leetcode", 
+    highlights: "Company-specific sets", 
+    url: "https://www.geeksforgeeks.org/must-do-coding-questions-for-companies-like-amazon-microsoft-adobe/",
+    problems: "Company-wise"
+  },
+  { 
+    name: "All-DSA-Sheets (GitHub)", 
+    author: "GFGSC-RTU", 
+    highlights: "Includes Striver, Love Babbar, Fraz, Arsh Goyal, etc.", 
+    url: "https://github.com/GFGSC-RTU/All-DSA-Sheets",
+    problems: "Multiple sheets"
+  },
+  { 
+    name: "450-DSA Platform", 
+    author: "Love Babbar Tracker", 
+    highlights: "Live tracker for Love Babbar sheet", 
+    url: "https://github.com/AsishRaju/450-DSA",
+    problems: "450 problems"
+  }
 ];
 
 const additionalResources = [
@@ -38,20 +108,146 @@ const additionalResources = [
 ];
 
 const mustHaveFeatures = [
-  { category: "🧭 ROADMAP & STRUCTURE", features: ["Beginner to Advanced interactive roadmap", "Visual dependency tree of concepts", "Toggle switch: 'Sheet mode' / 'Roadmap mode'"] },
-  { category: "🧩 SHEET INTEGRATION", features: ["All sheets tabbed with filters: Easy, Medium, Hard, Topic, Platform", "Option to 'Add your own sheet' (crowdsourced mode)"] },
-  { category: "🎯 PROBLEM ATTEMPT TRACKER", features: ["Solved, attempted, bookmarked, marked for review", "Cloud sync via user account", "Daily streak tracking + XP points"] },
-  { category: "💻 IN-BUILT CODE EDITOR", features: ["Supports C++, Java, Python with custom test cases", "Monaco or Ace editor + language switcher", "Save code per question (autosave & backup)"] },
-  { category: "📊 DASHBOARD", features: ["Total questions solved, daily/weekly goals", "Time spent on topics", "Pie chart by sheet/topic/difficulty", "Certificate unlock on completion (gamify)"] },
-  { category: "📹 VIDEO TUTORIAL EMBED", features: ["Auto-embed video tutorials (Striver, Babbar, Apna College, etc.)", "Toggle to view 'only problems with video explanation'"] },
-  { category: "🔍 SEARCH & FILTER ENGINE", features: ["Smart filtering by topic, tag, difficulty, company, platform, sheet", "Full-text search (even inside problem description)"] },
-  { category: "📚 THEORY + EXAMPLES", features: ["GFG/W3Schools/Notes under each topic (in markdown)", "AI assistant to explain problem & give hints"] },
-  { category: "💡 WEEKLY CHALLENGES", features: ["Daily 2–5 problem suggestions based on your progress", "Community leaderboard", "Feature to challenge a friend (duel mode)"] },
-  { category: "🧑‍💻 INTERVIEW MODE", features: ["Timer-based 'mock' tests with questions from top companies", "After test: Performance graph + solutions"] },
-  { category: "🧠 NOTES & DISCUSSIONS", features: ["Personal notes section per problem/topic", "Public discussions (like Leetcode)", "Upvote/downvote explanations"] },
-  { category: "🌐 MULTI-LANGUAGE SUPPORT", features: ["Add Hindi/English toggle for beginners", "Regional language support for future expansion"] },
-  { category: "📲 MOBILE RESPONSIVE + PWA", features: ["Save to home screen", "Offline mode for sheets + notes", "Push notifications for challenge alerts"] },
-  { category: "🎁 EXTRAS FOR UNIQUENESS", features: ["📦 AI Mode: Use Openrouter to give dynamic hints or partial solutions", "🏆 Badges for milestones: 50Qs, 100Qs, 1st DP solved, etc.", "🔗 Smart Links: Hover over any GFG/W3 link to show preview/snippet"] }
+  { 
+    category: "🧭 ROADMAP & STRUCTURE", 
+    icon: GitBranch,
+    features: [
+      "Beginner to Advanced interactive roadmap with visual progress tracking",
+      "Visual dependency tree showing concept relationships and prerequisites", 
+      "Toggle switch between 'Sheet mode' and 'Roadmap mode' for different learning paths",
+      "Personalized learning path recommendations based on skill assessment"
+    ]
+  },
+  { 
+    category: "🧩 SHEET INTEGRATION", 
+    icon: FileText,
+    features: [
+      "All sheets organized with smart filters: Easy, Medium, Hard, Topic, Platform",
+      "Custom sheet creation tool - 'Add your own sheet' with crowdsourced validation",
+      "Cross-sheet problem mapping to avoid duplicates and track coverage",
+      "Import/export functionality for personal sheet collections"
+    ]
+  },
+  { 
+    category: "🎯 PROBLEM ATTEMPT TRACKER", 
+    icon: Target,
+    features: [
+      "Comprehensive status tracking: Solved, Attempted, Bookmarked, Review Required",
+      "Cloud synchronization across all devices with real-time updates",
+      "Daily streak tracking with XP points and achievement system",
+      "Time-based analytics showing problem-solving patterns and improvement areas"
+    ]
+  },
+  { 
+    category: "💻 IN-BUILT CODE EDITOR", 
+    icon: Monitor,
+    features: [
+      "Multi-language support: C++, Java, Python with syntax highlighting",
+      "Custom test case creation and execution with performance metrics",
+      "Monaco/Ace editor integration with intelligent code completion",
+      "Auto-save functionality with version history and code backup system"
+    ]
+  },
+  { 
+    category: "📊 ANALYTICS DASHBOARD", 
+    icon: BarChart3,
+    features: [
+      "Comprehensive progress tracking: Total solved, daily/weekly goal completion",
+      "Time analytics: Hours spent per topic with productivity insights",
+      "Visual charts: Pie charts by sheet/topic/difficulty with trend analysis",
+      "Gamified achievements: Certificates and badges for milestone completion"
+    ]
+  },
+  { 
+    category: "📹 VIDEO TUTORIAL EMBED", 
+    icon: Play,
+    features: [
+      "Auto-embedded tutorials from top educators (Striver, Babbar, Apna College)",
+      "Smart filtering: 'Show only problems with video explanations'",
+      "Multiple solution approaches with video explanations for each method",
+      "Interactive timestamps linking video segments to specific problem parts"
+    ]
+  },
+  { 
+    category: "🔍 ADVANCED SEARCH & FILTER", 
+    icon: Filter,
+    features: [
+      "Multi-dimensional filtering: Topic, Tag, Difficulty, Company, Platform, Sheet",
+      "Full-text search capabilities including problem descriptions and solutions",
+      "AI-powered search suggestions and related problem recommendations",
+      "Saved search queries and custom filter presets for quick access"
+    ]
+  },
+  { 
+    category: "📚 COMPREHENSIVE THEORY", 
+    icon: BookOpen,
+    features: [
+      "Integrated theory sections with markdown support and LaTeX equations",
+      "AI-powered explanations and hints with step-by-step problem breakdown",
+      "Interactive examples with live code execution and visualization",
+      "Community-contributed explanations with rating and verification system"
+    ]
+  },
+  { 
+    category: "💡 GAMIFIED CHALLENGES", 
+    icon: Trophy,
+    features: [
+      "Daily problem recommendations based on learning curve and weak areas",
+      "Community leaderboards with weekly/monthly competitions",
+      "Friend challenge system with head-to-head problem-solving duels",
+      "Seasonal contests and special events with exclusive rewards"
+    ]
+  },
+  { 
+    category: "🧑‍💻 INTERVIEW SIMULATION", 
+    icon: Users,
+    features: [
+      "Timed mock interviews with company-specific question sets",
+      "Real-time performance analysis with detailed feedback reports",
+      "Interview recording and playback for self-assessment",
+      "Peer review system for collaborative improvement"
+    ]
+  },
+  { 
+    category: "🧠 COLLABORATIVE LEARNING", 
+    icon: MessageSquare,
+    features: [
+      "Personal notes system with rich text formatting and code snippets",
+      "Public discussion forums with upvoting and expert validation",
+      "Study groups and collaborative problem-solving sessions",
+      "Mentor matching system connecting beginners with experienced developers"
+    ]
+  },
+  { 
+    category: "🌐 ACCESSIBILITY & LOCALIZATION", 
+    icon: Globe,
+    features: [
+      "Multi-language support starting with Hindi/English toggle",
+      "Regional language expansion with community translations",
+      "Accessibility compliance with screen reader support",
+      "Customizable UI themes and font size adjustments"
+    ]
+  },
+  { 
+    category: "📲 MOBILE & OFFLINE EXPERIENCE", 
+    icon: Smartphone,
+    features: [
+      "Progressive Web App with 'Add to Home Screen' functionality",
+      "Comprehensive offline mode for sheets, notes, and completed solutions",
+      "Smart push notifications for challenges, streaks, and personalized reminders",
+      "Mobile-optimized code editor with gesture-based navigation"
+    ]
+  },
+  { 
+    category: "🎁 AI-POWERED UNIQUENESS", 
+    icon: Zap,
+    features: [
+      "OpenRouter integration for dynamic hints and partial solution generation",
+      "Smart badge system: Milestone achievements (50Q, 100Q, First DP, etc.)",
+      "Intelligent link previews with hover-based content snippets",
+      "AI-powered code review and optimization suggestions"
+    ]
+  }
 ];
 
 const ProFeaturesPage = () => {
@@ -95,7 +291,7 @@ const ProFeaturesPage = () => {
 
           <TabsContent value="sheets">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">✅ TOP DSA SHEETS (TO INTEGRATE)</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">✅ TOP DSA SHEETS (WITH REAL LINKS)</h2>
               <p className="text-gray-600">Handpicked collection of the most effective DSA problem sheets from top educators and platforms</p>
             </div>
             
@@ -112,6 +308,9 @@ const ProFeaturesPage = () => {
                       </Badge>
                     </div>
                     <p className="text-sm text-gray-600 font-medium">{sheet.author}</p>
+                    <Badge variant="secondary" className="text-xs w-fit">
+                      {sheet.problems}
+                    </Badge>
                   </CardHeader>
                   
                   <CardContent className="space-y-4">
@@ -123,6 +322,7 @@ const ProFeaturesPage = () => {
                       <Button
                         size="sm"
                         className="flex-1 mr-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                        onClick={() => window.open(sheet.url, '_blank')}
                       >
                         Access Sheet
                       </Button>
@@ -178,16 +378,17 @@ const ProFeaturesPage = () => {
               {mustHaveFeatures.map((section, index) => (
                 <Card key={index} className="hover:shadow-lg transition-all duration-300">
                   <CardHeader>
-                    <CardTitle className="text-lg text-gray-900">
+                    <CardTitle className="flex items-center text-lg text-gray-900">
+                      <section.icon className="w-6 h-6 mr-3 text-blue-600" />
                       {section.category}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ul className="space-y-2">
+                    <ul className="space-y-3">
                       {section.features.map((feature, featureIndex) => (
                         <li key={featureIndex} className="flex items-start text-sm text-gray-600">
-                          <span className="text-green-500 mr-2 mt-1">✓</span>
-                          {feature}
+                          <CheckCircle className="w-4 h-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                          <span className="leading-relaxed">{feature}</span>
                         </li>
                       ))}
                     </ul>
