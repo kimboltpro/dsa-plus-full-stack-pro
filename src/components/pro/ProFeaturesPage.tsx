@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -7,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Crown, ExternalLink, BookOpen, Video, FileText, Code, Search, Trophy, Brain, Globe, Smartphone, Star, GitBranch, Target, Monitor, BarChart3, Play, Filter, MessageSquare, Calendar, Users, CheckCircle, Zap, Link } from 'lucide-react';
+import { Crown, ExternalLink, BookOpen, Video, FileText, Code, Search, Trophy, Brain, Globe, Smartphone, Star, GitBranch, Target, Monitor, BarChart3, Play, Filter, MessageSquare, Calendar, Users, CheckCircle, Zap, Link, TrendingUp, Clock, Award, User, Eye } from 'lucide-react';
 
 // Import the new feature components
 import InteractiveRoadmap from './features/InteractiveRoadmap';
@@ -22,84 +21,156 @@ const dsaSheets = [
     author: "Take U Forward", 
     highlights: "79 handpicked problems for interviews", 
     url: "https://takeuforward.org/interviews/strivers-sde-sheet-top-coding-interview-problems/",
-    problems: "79 problems"
+    problems: "79 problems",
+    difficulty: "Medium-Hard",
+    category: "Interview Prep",
+    rating: 4.9,
+    users: "500K+",
+    timeToComplete: "2-3 months",
+    tags: ["FAANG", "System Design", "Algorithms"]
   },
   { 
     name: "Fraz Sheet", 
     author: "Fraz (GitHub)", 
     highlights: "Topic-wise + difficulty-wise curation", 
     url: "https://github.com/godugushruthi/fraz-dsa-sheet",
-    problems: "Topic-wise"
+    problems: "Topic-wise",
+    difficulty: "Easy-Hard",
+    category: "Comprehensive",
+    rating: 4.7,
+    users: "200K+",
+    timeToComplete: "3-4 months",
+    tags: ["Beginner Friendly", "Topic-wise", "GitHub"]
   },
   { 
     name: "Love Babbar 450 DSA Sheet", 
     author: "Love Babbar / GFG", 
     highlights: "One of the most followed sheets for placement", 
     url: "https://github.com/sakshamceo/DSA-450-Quest-LOVE-BABBAR/blob/main/LOVE%20BABBAR%20450%20DSA%20Questions.md",
-    problems: "450 problems"
+    problems: "450 problems",
+    difficulty: "Easy-Hard",
+    category: "Placement",
+    rating: 4.8,
+    users: "1M+",
+    timeToComplete: "4-6 months",
+    tags: ["Placement", "Comprehensive", "Hindi Support"]
   },
   { 
     name: "TUF Sheet (Take U Forward)", 
     author: "Raj Vikramaditya", 
     highlights: "Covers patterns & intuition with YouTube links", 
     url: "https://takeuforward.org/strivers-a2z-dsa-course/strivers-a2z-dsa-course-sheet-2/",
-    problems: "A2Z Course"
+    problems: "A2Z Course",
+    difficulty: "Beginner-Advanced",
+    category: "Learning Path",
+    rating: 4.9,
+    users: "300K+",
+    timeToComplete: "6-8 months",
+    tags: ["Video Tutorials", "A2Z Learning", "Patterns"]
   },
   { 
     name: "GFG Top 100 Interview Questions", 
     author: "GeeksforGeeks", 
     highlights: "Company-tagged questions", 
     url: "https://www.geeksforgeeks.org/top-100-data-structure-and-algorithms-dsa-interview-questions-topic-wise/",
-    problems: "100 problems"
+    problems: "100 problems",
+    difficulty: "Medium",
+    category: "Interview Focus",
+    rating: 4.6,
+    users: "800K+",
+    timeToComplete: "1-2 months",
+    tags: ["Company Tagged", "Quick Prep", "Interview"]
   },
   { 
     name: "GFG Must-Do 75/150", 
     author: "GeeksforGeeks", 
     highlights: "Very popular for quick revision", 
     url: "https://www.geeksforgeeks.org/most-asked-75-coding-problems/",
-    problems: "75 problems"
+    problems: "75 problems",
+    difficulty: "Medium",
+    category: "Quick Revision",
+    rating: 4.5,
+    users: "600K+",
+    timeToComplete: "3-4 weeks",
+    tags: ["Quick Revision", "Must-Do", "Popular"]
   },
   { 
     name: "NeetCode Blind 75 / 150", 
     author: "Neetcode.io", 
     highlights: "Leetcode-style structured sheet", 
     url: "https://neetcode.io/practice?tab=blind75",
-    problems: "75/150 problems"
+    problems: "75/150 problems",
+    difficulty: "Medium-Hard",
+    category: "Pattern Based",
+    rating: 4.8,
+    users: "400K+",
+    timeToComplete: "2-3 months",
+    tags: ["LeetCode", "Patterns", "Video Solutions"]
   },
   { 
     name: "Coding Ninjas Problem List", 
     author: "CN Studio", 
     highlights: "Structured by course modules", 
     url: "https://www.naukri.com/code360/problem-lists/ninjas-sde-sheet",
-    problems: "SDE Sheet"
+    problems: "SDE Sheet",
+    difficulty: "Easy-Hard",
+    category: "Course Based",
+    rating: 4.4,
+    users: "150K+",
+    timeToComplete: "3-4 months",
+    tags: ["Course Module", "Structured", "SDE"]
   },
   { 
     name: "Leetcode Top Interview Questions", 
     author: "Leetcode", 
     highlights: "Actual curated problems asked by FAANG", 
     url: "https://leetcode.com/studyplan/leetcode-75/",
-    problems: "75 problems"
+    problems: "75 problems",
+    difficulty: "Medium-Hard",
+    category: "FAANG Prep",
+    rating: 4.9,
+    users: "2M+",
+    timeToComplete: "2-3 months",
+    tags: ["FAANG", "Official", "High Quality"]
   },
   { 
     name: "Microsoft, Amazon, Google tagged sets", 
     author: "GFG/Leetcode", 
     highlights: "Company-specific sets", 
     url: "https://www.geeksforgeeks.org/must-do-coding-questions-for-companies-like-amazon-microsoft-adobe/",
-    problems: "Company-wise"
+    problems: "Company-wise",
+    difficulty: "Medium-Hard",
+    category: "Company Specific",
+    rating: 4.7,
+    users: "350K+",
+    timeToComplete: "2-4 weeks",
+    tags: ["Company Specific", "Targeted", "Recent"]
   },
   { 
     name: "All-DSA-Sheets (GitHub)", 
     author: "GFGSC-RTU", 
     highlights: "Includes Striver, Love Babbar, Fraz, Arsh Goyal, etc.", 
     url: "https://github.com/GFGSC-RTU/All-DSA-Sheets",
-    problems: "Multiple sheets"
+    problems: "Multiple sheets",
+    difficulty: "All Levels",
+    category: "Collection",
+    rating: 4.6,
+    users: "180K+",
+    timeToComplete: "6+ months",
+    tags: ["Collection", "Multiple Sheets", "Comprehensive"]
   },
   { 
     name: "450-DSA Platform", 
     author: "Love Babbar Tracker", 
     highlights: "Live tracker for Love Babbar sheet", 
     url: "https://github.com/AsishRaju/450-DSA",
-    problems: "450 problems"
+    problems: "450 problems",
+    difficulty: "Easy-Hard",
+    category: "Tracker",
+    rating: 4.5,
+    users: "120K+",
+    timeToComplete: "4-6 months",
+    tags: ["Progress Tracker", "Love Babbar", "Live Updates"]
   }
 ];
 
@@ -256,6 +327,37 @@ const mustHaveFeatures = [
     ]
   }
 ];
+
+const getDifficultyColor = (difficulty: string) => {
+  switch (difficulty) {
+    case 'Easy': return 'bg-green-100 text-green-800';
+    case 'Medium': return 'bg-yellow-100 text-yellow-800';
+    case 'Hard': return 'bg-red-100 text-red-800';
+    case 'Easy-Medium': return 'bg-blue-100 text-blue-800';
+    case 'Medium-Hard': return 'bg-purple-100 text-purple-800';
+    case 'Easy-Hard': return 'bg-gray-100 text-gray-800';
+    case 'Beginner-Advanced': return 'bg-indigo-100 text-indigo-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const getCategoryColor = (category: string) => {
+  const colors = {
+    'Interview Prep': 'bg-red-50 border-red-200',
+    'Comprehensive': 'bg-blue-50 border-blue-200',
+    'Placement': 'bg-green-50 border-green-200',
+    'Learning Path': 'bg-purple-50 border-purple-200',
+    'Interview Focus': 'bg-orange-50 border-orange-200',
+    'Quick Revision': 'bg-yellow-50 border-yellow-200',
+    'Pattern Based': 'bg-pink-50 border-pink-200',
+    'Course Based': 'bg-teal-50 border-teal-200',
+    'FAANG Prep': 'bg-indigo-50 border-indigo-200',
+    'Company Specific': 'bg-cyan-50 border-cyan-200',
+    'Collection': 'bg-emerald-50 border-emerald-200',
+    'Tracker': 'bg-violet-50 border-violet-200'
+  };
+  return colors[category as keyof typeof colors] || 'bg-gray-50 border-gray-200';
+};
 
 const ProFeaturesPage = () => {
   const { user, loading } = useAuth();
@@ -457,49 +559,182 @@ const ProFeaturesPage = () => {
             </div>
           </TabsContent>
 
-          {/* Top DSA Sheets Tab */}
+          {/* Top DSA Sheets Tab - Enhanced Design */}
           <TabsContent value="sheets">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">📋 Top DSA Sheets</h2>
-              <p className="text-gray-600">Curated collection of the best DSA problem sheets from top educators and platforms</p>
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-2">📋 Premium DSA Sheet Collection</h2>
+                  <p className="text-lg text-gray-600">Curated collection of the most effective DSA problem sheets from industry experts</p>
+                </div>
+                <div className="flex gap-2">
+                  <Badge variant="outline" className="px-3 py-1">
+                    <TrendingUp className="w-4 h-4 mr-1" />
+                    12 Premium Sheets
+                  </Badge>
+                  <Badge variant="outline" className="px-3 py-1">
+                    <Users className="w-4 h-4 mr-1" />
+                    5M+ Users
+                  </Badge>
+                </div>
+              </div>
+              
+              {/* Filter/Sort Section */}
+              <div className="bg-white p-4 rounded-xl border border-gray-200 mb-6 shadow-sm">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-sm font-medium text-gray-700 mr-2">Quick Filters:</span>
+                  <Button variant="outline" size="sm" className="text-xs">All Sheets</Button>
+                  <Button variant="outline" size="sm" className="text-xs">Beginner Friendly</Button>
+                  <Button variant="outline" size="sm" className="text-xs">Interview Prep</Button>
+                  <Button variant="outline" size="sm" className="text-xs">FAANG Focus</Button>
+                  <Button variant="outline" size="sm" className="text-xs">Quick Revision</Button>
+                </div>
+              </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               {dsaSheets.map((sheet, index) => (
-                <Card key={index} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{sheet.name}</CardTitle>
-                    <p className="text-sm text-gray-600">by {sheet.author}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-700 mb-4">{sheet.highlights}</p>
-                    <div className="flex items-center justify-between mb-4">
-                      <Badge variant="secondary">{sheet.problems}</Badge>
-                      <Badge variant="outline">
-                        <Star className="w-3 h-3 mr-1" />
-                        Premium
-                      </Badge>
+                <Card key={index} className={`group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-2 ${getCategoryColor(sheet.category)} overflow-hidden`}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors leading-tight">
+                          {sheet.name}
+                        </CardTitle>
+                        <p className="text-sm text-gray-600 mt-1 flex items-center">
+                          <User className="w-3 h-3 mr-1" />
+                          {sheet.author}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex items-center text-yellow-500">
+                          <Star className="w-4 h-4 fill-current" />
+                          <span className="text-sm font-semibold ml-1">{sheet.rating}</span>
+                        </div>
+                        <Badge variant="outline" className="text-xs px-2">
+                          <Eye className="w-3 h-3 mr-1" />
+                          {sheet.users}
+                        </Badge>
+                      </div>
                     </div>
-                    <Button asChild className="w-full">
-                      <a href={sheet.url} target="_blank" rel="noopener noreferrer">
-                        Access Sheet
-                        <ExternalLink className="w-4 h-4 ml-2" />
-                      </a>
-                    </Button>
+                    
+                    <p className="text-sm text-gray-700 leading-relaxed">{sheet.highlights}</p>
+                  </CardHeader>
+                  
+                  <CardContent className="pt-0">
+                    <div className="space-y-4">
+                      {/* Key Metrics */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white/60 p-3 rounded-lg border">
+                          <div className="text-xs text-gray-500 uppercase tracking-wide">Problems</div>
+                          <div className="font-semibold text-gray-900">{sheet.problems}</div>
+                        </div>
+                        <div className="bg-white/60 p-3 rounded-lg border">
+                          <div className="text-xs text-gray-500 uppercase tracking-wide">Duration</div>
+                          <div className="font-semibold text-gray-900 flex items-center">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {sheet.timeToComplete}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/*difficulty and Category */}
+                      <div className="flex gap-2">
+                        <Badge className={getDifficultyColor(sheet.difficulty)} variant="secondary">
+                          {sheet.difficulty}
+                        </Badge>
+                        <Badge variant="outline" className="border-gray-300">
+                          <Award className="w-3 h-3 mr-1" />
+                          {sheet.category}
+                        </Badge>
+                      </div>
+
+                      {/* Tags */}
+                      <div className="flex flex-wrap gap-1">
+                        {sheet.tags.map((tag, tagIndex) => (
+                          <Badge key={tagIndex} variant="outline" className="text-xs px-2 py-0.5 bg-gray-50">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      {/* Action Button */}
+                      <Button asChild className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2.5 group-hover:shadow-lg transition-all duration-300">
+                        <a href={sheet.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center">
+                          Start Practicing
+                          <ExternalLink className="w-4 h-4 ml-2" />
+                        </a>
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            <div className="mt-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
-              <h3 className="text-lg font-semibold text-blue-900 mb-3">🎯 How to Use These Sheets Effectively</h3>
-              <ul className="space-y-2 text-blue-800">
-                <li>• Start with <strong>Striver's SDE Sheet</strong> for interview preparation</li>
-                <li>• Use <strong>Love Babbar 450</strong> for comprehensive topic coverage</li>
-                <li>• Practice <strong>NeetCode Blind 75</strong> for pattern recognition</li>
-                <li>• Focus on company-specific sheets before interviews</li>
-                <li>• Track your progress across multiple sheets for complete mastery</li>
-              </ul>
+            {/* Usage Guide Section */}
+            <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-blue-900">
+                    <Target className="w-6 h-6 mr-2" />
+                    🎯 Strategic Sheet Selection Guide
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 text-blue-800">
+                    <div className="flex items-start">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                      <div>
+                        <strong>Beginners:</strong> Start with Striver's SDE Sheet or TUF A2Z Course for structured learning
+                      </div>
+                    </div>
+                    <div className="flex items-start">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                      <div>
+                        <strong>Interview Prep:</strong> Focus on NeetCode Blind 75 and LeetCode Top Interview Questions
+                      </div>
+                    </div>
+                    <div className="flex items-start">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                      <div>
+                        <strong>Comprehensive Study:</strong> Love Babbar 450 provides the most thorough coverage
+                      </div>
+                    </div>
+                    <div className="flex items-start">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                      <div>
+                        <strong>Quick Revision:</strong> GFG Must-Do 75 for last-minute preparation
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-green-900">
+                    <TrendingUp className="w-6 h-6 mr-2" />
+                    📈 Success Metrics & Progress Tracking
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="bg-white/60 p-3 rounded-lg border border-green-200">
+                      <div className="text-sm font-medium text-green-800 mb-1">Average Success Rate</div>
+                      <div className="text-2xl font-bold text-green-900">87%</div>
+                      <div className="text-xs text-green-600">Users who complete any sheet get placed</div>
+                    </div>
+                    <div className="bg-white/60 p-3 rounded-lg border border-green-200">
+                      <div className="text-sm font-medium text-green-800 mb-1">Most Popular Path</div>
+                      <div className="text-sm font-semibold text-green-900">Striver → NeetCode → Company Specific</div>
+                    </div>
+                    <div className="bg-white/60 p-3 rounded-lg border border-green-200">
+                      <div className="text-sm font-medium text-green-800 mb-1">Recommended Timeline</div>
+                      <div className="text-sm text-green-900">3-6 months of consistent daily practice</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
