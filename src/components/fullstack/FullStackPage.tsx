@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
@@ -485,6 +484,16 @@ const fullStackResources = {
       link: "https://github.com/mbeaudru/modern-js-cheatsheet",
       difficulty: "Intermediate",
       rating: 4.7
+    },
+    {
+      name: "Google DSA Guide",
+      description: "Google's comprehensive data structures and algorithms learning path with examples and practice problems",
+      type: "Learning Guide",
+      tags: ["DSA", "Data Structures", "Algorithms", "Google"],
+      link: "https://techdevguide.withgoogle.com/paths/data-structures-and-algorithms/",
+      difficulty: "Beginner-Advanced",
+      editorsPick: true,
+      rating: 4.8
     }
   ],
   newsletters: [
@@ -671,7 +680,7 @@ const FullStackPage = () => {
       case 'documentation': return <BookOpen className="w-4 h-4" />;
       case 'video course': case 'youtube video': case 'youtube playlist': case 'youtube channel': return <Video className="w-4 h-4" />;
       case 'tutorial': return <Code className="w-4 h-4" />;
-      case 'cheatsheet': case 'pdf cheatsheet': case 'repository cheatsheet': return <FileText className="w-4 h-4" />;
+      case 'cheatsheet': case 'pdf cheatsheet': case 'repository cheatsheet': case 'learning guide': return <FileText className="w-4 h-4" />;
       case 'blog/articles': case 'blog': case 'community blog': return <Mail className="w-4 h-4" />;
       case 'repository': return <Database className="w-4 h-4" />;
       case 'roadmap': return <Map className="w-4 h-4" />;
