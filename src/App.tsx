@@ -24,8 +24,9 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
+            {/* Remove dashboard route, point to portfolio */}
             <Route path="/portfolio" element={<PortfolioPage />} />
-            <Route path="/dashboard" element={<Navigate to="/portfolio" replace />} />
+            <Route path="/dashboard" element={<PortfolioPage />} />
             <Route path="/playground" element={<PlaygroundPage />} />
             <Route path="/roadmap" element={<RoadmapPage />} />
             <Route path="/sheets" element={<SheetsPage />} />
@@ -40,3 +41,4 @@ const App = () => (
 );
 
 export default App;
+
