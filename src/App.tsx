@@ -1,12 +1,13 @@
+
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./components/auth/AuthPage";
-import PortfolioPage from "./components/portfolio/PortfolioPage";
+import Dashboard from "./components/dashboard/Dashboard";
 import PlaygroundPage from "./components/playground/PlaygroundPage";
 import RoadmapPage from "./components/roadmap/RoadmapPage";
 import SheetsPage from "./components/sheets/SheetsPage";
@@ -24,9 +25,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
-            {/* Remove dashboard route, point to portfolio */}
-            <Route path="/portfolio" element={<PortfolioPage />} />
-            <Route path="/dashboard" element={<PortfolioPage />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/playground" element={<PlaygroundPage />} />
             <Route path="/roadmap" element={<RoadmapPage />} />
             <Route path="/sheets" element={<SheetsPage />} />
@@ -41,4 +40,3 @@ const App = () => (
 );
 
 export default App;
-

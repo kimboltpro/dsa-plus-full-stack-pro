@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,8 +40,8 @@ const DashboardHeader = () => {
           </div>
 
           <nav className="hidden md:flex space-x-8">
-            <Button variant="ghost" onClick={() => navigate('/portfolio')}>
-              Portfolio
+            <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+              Dashboard
             </Button>
             <Button variant="ghost" onClick={() => navigate('/sheets')}>
               Problem Sheets
