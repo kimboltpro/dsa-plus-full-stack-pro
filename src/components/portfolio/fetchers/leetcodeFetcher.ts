@@ -1,7 +1,4 @@
 
-/**
- * Fetches user stats from LeetCode's public GraphQL API (unofficial).
- */
 export async function fetchLeetCodeStats(username: string): Promise<{
   problemsSolved: number;
   contestRating: number | null;
@@ -12,54 +9,16 @@ export async function fetchLeetCodeStats(username: string): Promise<{
   profileUrl: string;
 }> {
   try {
-    // LeetCode unofficial API endpoint
-    const endpoint = "https://leetcode.com/graphql";
-    const body = {
-      query: `
-        query getUserProfile($username: String!) {
-          matchedUser(username: $username) {
-            username
-            profile {
-              userAvatar
-            }
-            submitStats: submitStatsGlobal {
-              acSubmissionNum {
-                difficulty
-                count
-                submissions
-              }
-            }
-            badge {
-              name
-            }
-            contestBadge {
-              name
-            }
-          }
-          userContestRanking(username: $username) {
-            rating
-            attendedContestsCount
-            topPercentage
-          }
-          recentSubmissionList(username: $username, limit: 5) {
-            title
-            timestamp
-          }
-        }
-      `,
-      variables: { username },
-    };
-
-    const resp = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+    const resp = await fetch('https://pqkqzbkwguoktggszvus.supabase.co/functions/v1/leetcode-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username }),
     });
 
-    if (!resp.ok) throw new Error("Failed to fetch LeetCode data");
+    if (!resp.ok) throw new Error('Failed to fetch LeetCode data');
     const data = await resp.json();
 
-    if (!data.data || !data.data.matchedUser) throw new Error("LeetCode user not found");
+    if (!data.data || !data.data.matchedUser) throw new Error('LeetCode user not found');
 
     const acSum = data.data.matchedUser.submitStats?.acSubmissionNum?.find(
       (x: any) => x.difficulty === "All"
@@ -74,7 +33,7 @@ export async function fetchLeetCodeStats(username: string): Promise<{
     return {
       problemsSolved: acSum,
       contestRating: rating,
-      streak: null, // LeetCode doesn't expose streak via API; leave null for now.
+      streak: null,
       badges: badgeNames,
       recentSubmissions:
         data.data.recentSubmissionList?.map((s: any) => ({

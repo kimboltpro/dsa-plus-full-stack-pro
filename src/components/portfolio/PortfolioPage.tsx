@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { LeetCodeWidget } from "./widgets/LeetCodeWidget";
-// Scaffolded widgets for future use:
 import { CodeforcesWidget } from "./widgets/CodeforcesWidget";
 import { CodeChefWidget } from "./widgets/CodeChefWidget";
 import { HackerRankWidget } from "./widgets/HackerRankWidget";
 import { GithubWidget } from "./widgets/GithubWidget";
 import { fetchLeetCodeStats } from "./fetchers/leetcodeFetcher";
+import { fetchCodeforcesStats } from "./fetchers/codeforcesFetcher";
+import { fetchGithubStats } from "./fetchers/githubFetcher";
 
 const platformDefs = [
   {
@@ -65,19 +66,17 @@ export default function PortfolioPage() {
   const [fetching, setFetching] = useState<{ [key: string]: boolean }>({});
   const [validated, setValidated] = useState<{ [key: string]: boolean }>({});
 
-  // Handle input change
   function handleInputChange(platform: string, value: string) {
     setInputs((prev) => ({ ...prev, [platform]: value }));
     setValidated((prev) => ({ ...prev, [platform]: false }));
   }
 
-  // Helper: Extract username from profile link or pass as is for username
   function extractUsername(platform: string, rawInput: string) {
     let trimmed = rawInput.trim();
     if (platform === "leetcode" && trimmed.startsWith("https://leetcode.com/")) {
       trimmed = trimmed
         .replace("https://leetcode.com/", "")
-        .replace(/\/+/g, ""); // removes trailing slashes
+        .replace(/\/+/g, "");
     }
     if (platform === "codeforces" && trimmed.startsWith("https://codeforces.com/profile/")) {
       trimmed = trimmed.replace("https://codeforces.com/profile/", "").replace(/\/+/g, "");
@@ -94,7 +93,6 @@ export default function PortfolioPage() {
     return trimmed;
   }
 
-  // Validate and fetch stats for platforms
   async function handleFetchStats(platform: string) {
     if (!inputs[platform]) {
       toast.error("Please enter a username or profile URL");
@@ -102,15 +100,24 @@ export default function PortfolioPage() {
     }
     setFetching((prev) => ({ ...prev, [platform]: true }));
     try {
+      const username = extractUsername(platform, inputs[platform]);
+      
       if (platform === "leetcode") {
-        let username = extractUsername("leetcode", inputs.leetcode);
         const data = await fetchLeetCodeStats(username);
         setStats((prev) => ({ ...prev, leetcode: data }));
         setValidated((prev) => ({ ...prev, leetcode: true }));
         toast.success("LeetCode stats fetched!");
-      }
-      // Scaffold for other platforms:
-      else {
+      } else if (platform === "codeforces") {
+        const data = await fetchCodeforcesStats(username);
+        setStats((prev) => ({ ...prev, codeforces: data }));
+        setValidated((prev) => ({ ...prev, codeforces: true }));
+        toast.success("Codeforces stats fetched!");
+      } else if (platform === "github") {
+        const data = await fetchGithubStats(username);
+        setStats((prev) => ({ ...prev, github: data }));
+        setValidated((prev) => ({ ...prev, github: true }));
+        toast.success("GitHub stats fetched!");
+      } else {
         toast.info("This platform will be implemented soon!");
         setValidated((prev) => ({ ...prev, [platform]: false }));
       }
@@ -151,7 +158,7 @@ export default function PortfolioPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 pb-20">
-      <div className="max-w-3xl mx-auto pt-12 px-4 sm:px-8">
+      <div className="max-w-4xl mx-auto pt-12 px-4 sm:px-8">
         {/* Portfolio Card */}
         <Card className="mb-10 shadow-lg border-blue-100">
           <CardHeader>
@@ -175,7 +182,6 @@ export default function PortfolioPage() {
                 <Button
                   onClick={() => handleFetchStats(p.id)}
                   disabled={!inputs[p.id] || fetching[p.id]}
-                  // No loading prop here, handled by native disabled + spinner
                 >
                   {fetching[p.id] ? (
                     <span className="flex items-center">
@@ -197,22 +203,60 @@ export default function PortfolioPage() {
         </Card>
 
         {/* Stats Display */}
-        <div className="grid gap-6">
+        <div className="grid gap-6 md:grid-cols-2">
           {stats.leetcode && <LeetCodeWidget stats={stats.leetcode} />}
-          {/* Scaffolds for additional platforms, showing placeholder widgets */}
-          {inputs.codeforces && (
-            <CodeforcesWidget stats={stats.codeforces} fetching={fetching.codeforces} />
-          )}
+          {stats.codeforces && <CodeforcesWidget stats={stats.codeforces} fetching={false} />}
+          {stats.github && <GithubWidget stats={stats.github} fetching={false} />}
           {inputs.codechef && (
             <CodeChefWidget stats={stats.codechef} fetching={fetching.codechef} />
           )}
           {inputs.hackerrank && (
             <HackerRankWidget stats={stats.hackerrank} fetching={fetching.hackerrank} />
           )}
-          {inputs.github && (
-            <GithubWidget stats={stats.github} fetching={fetching.github} />
-          )}
         </div>
+
+        {/* Achievement System Preview */}
+        {(stats.leetcode || stats.codeforces || stats.github) && (
+          <div className="mt-12">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">🏆 Achievements</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {stats.leetcode?.problemsSolved >= 100 && (
+                    <div className="text-center p-3 bg-yellow-50 rounded-lg border">
+                      <div className="text-2xl mb-1">🎯</div>
+                      <div className="text-xs font-semibold">Century Club</div>
+                      <div className="text-xs text-gray-600">100+ LC Problems</div>
+                    </div>
+                  )}
+                  {stats.codeforces?.rating >= 1400 && (
+                    <div className="text-center p-3 bg-blue-50 rounded-lg border">
+                      <div className="text-2xl mb-1">⭐</div>
+                      <div className="text-xs font-semibold">CF Specialist</div>
+                      <div className="text-xs text-gray-600">1400+ Rating</div>
+                    </div>
+                  )}
+                  {stats.github?.totalStars >= 50 && (
+                    <div className="text-center p-3 bg-green-50 rounded-lg border">
+                      <div className="text-2xl mb-1">🌟</div>
+                      <div className="text-xs font-semibold">Star Collector</div>
+                      <div className="text-xs text-gray-600">50+ GitHub Stars</div>
+                    </div>
+                  )}
+                  {stats.leetcode?.contestRating >= 1800 && (
+                    <div className="text-center p-3 bg-purple-50 rounded-lg border">
+                      <div className="text-2xl mb-1">👑</div>
+                      <div className="text-xs font-semibold">Contest Master</div>
+                      <div className="text-xs text-gray-600">1800+ LC Rating</div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Global Performance Heatmap Placeholder */}
         <div className="mt-12">
@@ -223,20 +267,6 @@ export default function PortfolioPage() {
             <CardContent>
               <div className="h-24 flex items-center justify-center text-gray-400">
                 (Coming soon: Visualize all problem, submission, and contest activity here)
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Badge / Achievement System Placeholder */}
-        <div className="mt-12">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Achievements & Badges</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-24 flex items-center justify-center text-gray-400">
-                (Coming soon: Earn and view trophies, badges, and milestones)
               </div>
             </CardContent>
           </Card>
