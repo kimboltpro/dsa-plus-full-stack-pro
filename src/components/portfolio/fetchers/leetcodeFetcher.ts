@@ -11,7 +11,10 @@ export async function fetchLeetCodeStats(username: string): Promise<{
   try {
     const resp = await fetch('https://pqkqzbkwguoktggszvus.supabase.co/functions/v1/leetcode-proxy', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxa3F6Ymt3Z3Vva3RnZ3N6dnVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NjIzNDMsImV4cCI6MjA1MDUzODM0M30.ej1RDN_KQKUPcRTh4xpZLFHd9Q2p7YF4zDKGfXzBVSM'}`
+      },
       body: JSON.stringify({ username }),
     });
 

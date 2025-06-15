@@ -53,8 +53,8 @@ export const Navbar = () => {
 
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
-              <Button onClick={() => navigate('/dashboard')}>
-                Dashboard
+              <Button onClick={() => navigate('/portfolio')}>
+                Portfolio
               </Button>
             ) : (
               <>
@@ -120,9 +120,9 @@ export const Navbar = () => {
                 {user ? (
                   <Button 
                     className="w-full"
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => navigate('/portfolio')}
                   >
-                    Dashboard
+                    Portfolio
                   </Button>
                 ) : (
                   <>
