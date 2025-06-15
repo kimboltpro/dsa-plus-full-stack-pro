@@ -24,10 +24,147 @@ const Index = () => {
     );
   }
 
-  // If user is authenticated, redirect to dashboard
+  // Show full home page for authenticated users
   if (user) {
-    navigate('/dashboard', { replace: true });
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+        {/* Header for authenticated users */}
+        <div className="border-b border-gray-200 bg-white/80 backdrop-blur-md">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Code className="h-8 w-8 text-blue-600 mr-3" />
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  DSA Mastery Hub
+                </h1>
+              </div>
+              <div className="flex items-center space-x-4">
+                <Button variant="ghost" onClick={() => navigate('/dashboard')}>
+                  Dashboard
+                </Button>
+                <Button variant="ghost" onClick={() => navigate('/sheets')}>
+                  Sheets
+                </Button>
+                <Button variant="ghost" onClick={() => navigate('/roadmap')}>
+                  Roadmap
+                </Button>
+                <Button variant="ghost" onClick={() => navigate('/playground')}>
+                  Playground
+                </Button>
+                <Button variant="ghost" onClick={() => navigate('/pro')}>
+                  🌟 Pro Features
+                </Button>
+                <Button variant="ghost" onClick={() => navigate('/fullstack')}>
+                  🚀 Full Stack
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center mb-16">
+            <h1 className="text-5xl font-bold text-gray-900 mb-6">
+              Master Data Structures & Algorithms
+            </h1>
+            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              Your ultimate destination for Data Structures & Algorithms mastery. Access TUF Sheet, Striver Sheet, Love Babbar 450, and more — all organized, tracked, and optimized for your success.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                size="lg"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                onClick={() => navigate('/dashboard')}
+              >
+                Go to Dashboard
+              </Button>
+              <Button 
+                variant="outline" 
+                size="lg"
+                onClick={() => navigate('/roadmap')}
+              >
+                📋 View Roadmap
+              </Button>
+            </div>
+          </div>
+
+          {/* Quick Access Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+            <Card className="border-2 border-blue-100 hover:border-blue-200 transition-colors cursor-pointer" onClick={() => navigate('/sheets')}>
+              <CardHeader>
+                <div className="flex items-center mb-2">
+                  <BookOpen className="h-6 w-6 text-blue-600 mr-2" />
+                  <CardTitle className="text-lg">Problem Sheets</CardTitle>
+                </div>
+                <CardDescription>
+                  Access curated problem sets from top sources
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-2 border-green-100 hover:border-green-200 transition-colors cursor-pointer" onClick={() => navigate('/playground')}>
+              <CardHeader>
+                <div className="flex items-center mb-2">
+                  <Code className="h-6 w-6 text-green-600 mr-2" />
+                  <CardTitle className="text-lg">Code Playground</CardTitle>
+                </div>
+                <CardDescription>
+                  Practice coding with our interactive environment
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-2 border-purple-100 hover:border-purple-200 transition-colors cursor-pointer" onClick={() => navigate('/roadmap')}>
+              <CardHeader>
+                <div className="flex items-center mb-2">
+                  <Target className="h-6 w-6 text-purple-600 mr-2" />
+                  <CardTitle className="text-lg">DSA Roadmap</CardTitle>
+                </div>
+                <CardDescription>
+                  Follow structured learning paths
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="border-2 border-orange-100 hover:border-orange-200 transition-colors cursor-pointer" onClick={() => navigate('/pro')}>
+              <CardHeader>
+                <div className="flex items-center mb-2">
+                  <Zap className="h-6 w-6 text-orange-600 mr-2" />
+                  <CardTitle className="text-lg">Pro Features</CardTitle>
+                </div>
+                <CardDescription>
+                  Unlock advanced tools and analytics
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+
+          {/* Features Section */}
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold text-gray-900 mb-8">Everything You Need to Master DSA</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="flex flex-col items-center p-6 bg-white rounded-lg shadow-sm border">
+                <Target className="h-12 w-12 text-blue-600 mb-4" />
+                <h3 className="font-semibold text-gray-900 mb-2">Progress Tracking</h3>
+                <p className="text-sm text-gray-600 text-center">Monitor your learning journey with detailed analytics</p>
+              </div>
+              <div className="flex flex-col items-center p-6 bg-white rounded-lg shadow-sm border">
+                <Code className="h-12 w-12 text-green-600 mb-4" />
+                <h3 className="font-semibold text-gray-900 mb-2">Interactive Coding</h3>
+                <p className="text-sm text-gray-600 text-center">Practice with built-in code editor and feedback</p>
+              </div>
+              <div className="flex flex-col items-center p-6 bg-white rounded-lg shadow-sm border">
+                <Trophy className="h-12 w-12 text-purple-600 mb-4" />
+                <h3 className="font-semibold text-gray-900 mb-2">Achievement System</h3>
+                <p className="text-sm text-gray-600 text-center">Earn badges as you master different topics</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Show authentication-required landing page for non-authenticated users
