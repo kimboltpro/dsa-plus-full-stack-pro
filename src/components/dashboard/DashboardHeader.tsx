@@ -40,8 +40,8 @@ const DashboardHeader = () => {
           </div>
 
           <nav className="hidden md:flex space-x-8">
-            <Button variant="ghost" onClick={() => navigate('/dashboard')}>
-              Dashboard
+            <Button variant="ghost" onClick={() => navigate('/portfolio')}>
+              Portfolio
             </Button>
             <Button variant="ghost" onClick={() => navigate('/sheets')}>
               Problem Sheets
