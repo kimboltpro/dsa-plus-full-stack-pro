@@ -28,18 +28,19 @@ const dsaResources = {
     {
       name: "Striver's STL Cheat Sheet",
       topics: "C++ STL (vectors, sets, maps)",
-      link: "https://takeuforward.org/c/c-stl-cheat-sheet/",
-      description: "Comprehensive C++ STL reference with examples and time complexities",
+      link: "https://takeuforward.org/c/c-stl-tutorial-most-frequent-used-stl-containers/",
+      description:
+        "Comprehensive C++ STL reference with examples and time complexities",
       rating: 4.9,
-      category: "C++"
+      category: "C++",
     },
     {
       name: "Techie Delight Cheat Sheet",
       topics: "Patterns, complexities",
-      link: "https://www.techiedelight.com/cheat-sheet/",
+      link: "https://www.techiedelight.com/data-structures-and-algorithms-problems/",
       description: "Quick reference for common DSA patterns and algorithms",
       rating: 4.7,
-      category: "General"
+      category: "General",
     },
     {
       name: "Codeforces STL Sheet",
@@ -47,24 +48,24 @@ const dsaResources = {
       link: "https://codeforces.com/blog/entry/74684",
       description: "Essential STL functions for competitive programming",
       rating: 4.8,
-      category: "C++"
+      category: "C++",
     },
     {
       name: "Python DSA Cheatsheet",
       topics: "Lists, dicts, sets, heaps",
-      link: "https://github.com/ChiperSoft/DSA-Python-CheatSheet",
+      link: "https://www.stationx.net/python-data-structures-cheat-sheet/",
       description: "Python data structures and algorithms quick reference",
       rating: 4.6,
-      category: "Python"
+      category: "Python",
     },
     {
       name: "Java DSA Cheatsheet",
       topics: "Collections, recursion",
-      link: "https://www.java67.com/2018/03/data-structure-and-algorithm-cheat-sheet-java.html",
+      link: "https://javaconceptoftheday.com/java-collections-cheat-sheet/",
       description: "Java collections framework and common algorithms",
       rating: 4.5,
-      category: "Java"
-    }
+      category: "Java",
+    },
   ],
   complexityTables: [
     {
