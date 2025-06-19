@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -106,7 +105,9 @@ const AuthPage = () => {
                 enable: true,
                 mode: "repulse",
               },
-              resize: true,
+              resize: {
+                enable: true,
+              },
             },
             modes: {
               push: {
@@ -142,7 +143,7 @@ const AuthPage = () => {
             number: {
               density: {
                 enable: true,
-                area: 800,
+                value_area: 800,
               },
               value: 80,
             },
