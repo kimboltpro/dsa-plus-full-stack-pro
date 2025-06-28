@@ -11,32 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Code, 
-  Zap, 
-  Target, 
-  Shield, 
-  BookOpen, 
-  Trophy, 
-  TrendingUp, 
-  Users, 
-  CheckCircle,
-  Star,
-  Rocket,
-  Brain,
-  Clock,
-  Award,
-  Github,
-  ExternalLink,
-  Play,
-  Monitor,
-  Database,
-  Globe,
-  Terminal,
-  Lightbulb,
-  Fire,
-  Coffee
-} from "lucide-react";
+import { Code, Zap, Target, Shield, BookOpen, Trophy, TrendingUp, Users, CheckCircle, Star, Rocket, Brain, Clock, Award, Github, ExternalLink, Play, Monitor, Database, Globe, Terminal, Lightbulb, Siren as Fire, Coffee } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
