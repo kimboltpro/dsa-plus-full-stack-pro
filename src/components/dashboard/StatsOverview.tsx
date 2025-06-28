@@ -64,12 +64,12 @@ const StatsOverview: React.FC<StatsOverviewProps> = ({ userStats, isLoading }) =
       change: 'Adjust in settings'
     },
     {
-      title: 'Time Invested',
-      value: '42 hours',
-      icon: Clock,
+      title: 'Last Active',
+      value: userStats?.last_activity_date ? new Date(userStats.last_activity_date).toLocaleDateString() : 'Today',
+      icon: Calendar,
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-100',
-      change: '+5h this week'
+      change: 'Daily login'
     }
   ];
 

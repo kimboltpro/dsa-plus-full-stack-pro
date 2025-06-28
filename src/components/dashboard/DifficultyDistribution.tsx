@@ -1,5 +1,5 @@
-import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import React, { useState, useEffect } from 'react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,48 +13,94 @@ interface DifficultyDistributionProps {
 
 const DifficultyDistribution: React.FC<DifficultyDistributionProps> = ({ isLoading }) => {
   const { user } = useAuth();
-  const [data, setData] = React.useState([
-    { name: 'Easy', value: 45, color: '#10B981' },
-    { name: 'Medium', value: 30, color: '#F59E0B' },
-    { name: 'Hard', value: 15, color: '#EF4444' }
+  const [data, setData] = useState([
+    { name: 'Easy', value: 0, color: '#10B981' },
+    { name: 'Medium', value: 0, color: '#F59E0B' },
+    { name: 'Hard', value: 0, color: '#EF4444' }
   ]);
   
-  const [isDataLoading, setIsDataLoading] = React.useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!user) return;
 
     const fetchDifficultyData = async () => {
       try {
         setIsDataLoading(true);
         
-        // Get counts by difficulty for solved problems
-        const { data, error } = await supabase.rpc('get_solved_problems_by_difficulty', {
-          user_id: user.id
-        });
-        
-        if (error) {
-          console.error('Error fetching difficulty distribution:', error);
-          return;
-        }
-        
-        if (data && Array.isArray(data)) {
-          const mappedData = [
-            { name: 'Easy', value: 0, color: '#10B981' },
-            { name: 'Medium', value: 0, color: '#F59E0B' },
-            { name: 'Hard', value: 0, color: '#EF4444' }
-          ];
-          
-          data.forEach((item: any) => {
-            const difficulty = item.difficulty.charAt(0).toUpperCase() + item.difficulty.slice(1).toLowerCase();
-            const index = mappedData.findIndex(d => d.name === difficulty);
-            if (index !== -1) {
-              mappedData[index].value = item.count;
-            }
+        // Try to get counts by difficulty for solved problems using RPC
+        try {
+          const { data, error } = await supabase.rpc('get_solved_problems_by_difficulty', {
+            user_id: user.id
           });
           
-          setData(mappedData);
+          if (error) {
+            console.error('Error fetching difficulty distribution:', error);
+            throw error;
+          }
+          
+          if (data && Array.isArray(data)) {
+            const mappedData = [
+              { name: 'Easy', value: 0, color: '#10B981' },
+              { name: 'Medium', value: 0, color: '#F59E0B' },
+              { name: 'Hard', value: 0, color: '#EF4444' }
+            ];
+            
+            data.forEach((item: any) => {
+              const difficulty = item.difficulty;
+              const index = mappedData.findIndex(d => d.name === difficulty);
+              if (index !== -1) {
+                mappedData[index].value = parseInt(item.count);
+              }
+            });
+            
+            setData(mappedData);
+          }
+          return;
+        } catch (rpcError) {
+          console.error('RPC Error:', rpcError);
+          // Fallback to manual query if RPC fails
         }
+        
+        // Manual fallback query
+        const { data: progressData, error: progressError } = await supabase
+          .from('user_progress')
+          .select(`
+            problem_id,
+            problems!inner(
+              difficulty
+            )
+          `)
+          .eq('user_id', user.id)
+          .eq('status', 'solved');
+        
+        if (progressError) {
+          throw progressError;
+        }
+        
+        // Count problems by difficulty
+        const difficultyCounts = {
+          Easy: 0,
+          Medium: 0,
+          Hard: 0
+        };
+        
+        progressData.forEach(item => {
+          const difficulty = item.problems.difficulty;
+          if (difficulty in difficultyCounts) {
+            difficultyCounts[difficulty]++;
+          }
+        });
+        
+        // Map to chart data format
+        const mappedData = [
+          { name: 'Easy', value: difficultyCounts.Easy, color: '#10B981' },
+          { name: 'Medium', value: difficultyCounts.Medium, color: '#F59E0B' },
+          { name: 'Hard', value: difficultyCounts.Hard, color: '#EF4444' }
+        ];
+        
+        setData(mappedData);
+        
       } catch (err) {
         console.error('Error in fetchDifficultyData:', err);
       } finally {

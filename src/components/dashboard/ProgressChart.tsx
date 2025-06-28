@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorDisplay } from '@/components/common/ErrorDisplay';
+import { Button } from '@/components/ui/button';
 
 interface TopicProgress {
   topic_id: string;
@@ -17,14 +18,19 @@ const ProgressChart = () => {
   const [data, setData] = useState<TopicProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<'topics' | 'weekly'>('topics');
 
   useEffect(() => {
     if (user) {
-      fetchChartData();
+      if (view === 'topics') {
+        fetchTopicData();
+      } else {
+        fetchWeeklyData();
+      }
     }
-  }, [user]);
+  }, [user, view]);
 
-  const fetchChartData = async () => {
+  const fetchTopicData = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -107,9 +113,56 @@ const ProgressChart = () => {
         .sort((a, b) => b.count - a.count);
 
       setData(chartData);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching chart data:', err);
       setError(`Error fetching topic progress: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchWeeklyData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Get the dates for the last 7 days
+      const dates = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        dates.push(date.toISOString().split('T')[0]);
+      }
+
+      // Fetch problems solved on each date
+      const { data: progress, error: progressError } = await supabase
+        .from('user_progress')
+        .select('solved_at')
+        .eq('user_id', user?.id)
+        .eq('status', 'solved');
+
+      if (progressError) {
+        throw new Error(`Error fetching progress: ${progressError.message}`);
+      }
+
+      // Count problems solved on each date
+      const dailyProgress = dates.map(date => {
+        const solvedCount = progress.filter(item => 
+          item.solved_at && item.solved_at.startsWith(date)
+        ).length;
+
+        return {
+          topic_id: date, // reuse the same data structure
+          topic_name: new Date(date).toLocaleDateString(undefined, { weekday: 'short' }),
+          count: solvedCount,
+          fullDate: date
+        };
+      });
+
+      setData(dailyProgress);
+    } catch (err: any) {
+      console.error('Error fetching weekly data:', err);
+      setError(`Error fetching weekly progress: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -126,25 +179,41 @@ const ProgressChart = () => {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Topic-wise Progress</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>{view === 'topics' ? 'Topic-wise Progress' : 'Weekly Progress'}</CardTitle>
+        <div className="flex gap-2">
+          <Button 
+            variant={view === 'topics' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setView('topics')}
+          >
+            Topics
+          </Button>
+          <Button 
+            variant={view === 'weekly' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setView('weekly')}
+          >
+            Weekly
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="h-80 flex items-center justify-center">
-            <LoadingSpinner size="lg" text="Loading progress data..." />
+            <LoadingSpinner size="lg" text={`Loading ${view} data...`} />
           </div>
         ) : error ? (
           <ErrorDisplay 
             error={error} 
-            onRetry={fetchChartData} 
+            onRetry={view === 'topics' ? fetchTopicData : fetchWeeklyData} 
             variant="card"
           />
-        ) : data.length === 0 ? (
+        ) : data.length === 0 || data.every(item => item.count === 0) ? (
           <div className="h-80 flex items-center justify-center flex-col">
             <p className="text-gray-500 mb-4">No problem-solving data yet</p>
             <p className="text-sm text-gray-400">
-              Start solving problems to see your progress by topic
+              Start solving problems to see your {view === 'topics' ? 'topic-wise' : 'weekly'} progress
             </p>
           </div>
         ) : (
@@ -153,7 +222,7 @@ const ProgressChart = () => {
               <BarChart 
                 data={data} 
                 margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                barSize={35}
+                barSize={view === 'topics' ? 35 : 25}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                 <XAxis 
@@ -173,7 +242,7 @@ const ProgressChart = () => {
                     boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
                   }}
                   formatter={(value) => [`${value} Problems`, 'Solved']}
-                  labelFormatter={(label) => `Topic: ${label}`}
+                  labelFormatter={(label) => view === 'topics' ? `Topic: ${label}` : `Day: ${label}`}
                 />
                 <Bar 
                   dataKey="count" 
@@ -181,7 +250,11 @@ const ProgressChart = () => {
                   radius={[4, 4, 0, 0]}
                 >
                   {data.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={getBarColor(index)} />
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={getBarColor(index)} 
+                      className="hover:opacity-80 transition-opacity"
+                    />
                   ))}
                 </Bar>
               </BarChart>

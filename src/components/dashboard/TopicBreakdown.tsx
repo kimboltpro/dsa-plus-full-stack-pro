@@ -161,7 +161,6 @@ const TopicBreakdown: React.FC<TopicBreakdownProps> = ({ topicProgress, isLoadin
                 value={topic.percentage} 
                 className="h-3 group-hover:h-4 transition-all" 
                 style={{ backgroundColor: '#f1f5f9' }}
-                indicatorColor={getColorByPercentage(topic.percentage)}
               />
             </div>
             <div className="flex items-center gap-2">

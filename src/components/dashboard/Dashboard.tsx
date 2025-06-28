@@ -6,8 +6,6 @@ import StatsOverview from './StatsOverview';
 import QuickActions from './QuickActions';
 import ProgressChart from './ProgressChart';
 import RecentActivity from './RecentActivity';
-import LeetCodeWidget from './LeetCodeWidget';
-import CodolioWidget from './CodolioWidget';
 import { PageLoading } from '../common/LoadingSpinner';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,6 +17,7 @@ import CodingStreak from './CodingStreak';
 import TopicBreakdown from './TopicBreakdown';
 import FriendsActivity from './FriendsActivity';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 interface UserStats {
   total_problems_solved: number;
@@ -39,8 +38,81 @@ const Dashboard = () => {
     // If user is not authenticated after loading, redirect to home
     if (!loading && !user) {
       navigate('/', { replace: true });
+      return;
+    }
+
+    // If user is authenticated, update the last activity date to today
+    if (!loading && user) {
+      updateLastActivityDate();
     }
   }, [user, loading, navigate]);
+
+  // Function to update user's last activity date (for streak tracking)
+  const updateLastActivityDate = async () => {
+    if (!user) return;
+    
+    try {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      // Get current user stats
+      const { data: existingStats, error: statsError } = await supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+        
+      if (statsError && statsError.code !== 'PGRST116') {
+        console.error('Error fetching user stats:', statsError);
+        return;
+      }
+      
+      // If this is the user's first visit or they haven't logged in today
+      if (!existingStats || existingStats.last_activity_date !== today) {
+        // Calculate streak
+        let newStreak = 1; // Default to 1 (today)
+        let longestStreak = existingStats?.longest_streak || 1;
+        
+        if (existingStats) {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = yesterday.toISOString().split('T')[0];
+          
+          if (existingStats.last_activity_date === yesterdayStr) {
+            // User was active yesterday, increment streak
+            newStreak = (existingStats.current_streak || 0) + 1;
+          } else if (existingStats.last_activity_date !== today) {
+            // User wasn't active yesterday and hasn't been active today yet, reset streak
+            newStreak = 1;
+          } else {
+            // User was already active today, keep current streak
+            newStreak = existingStats.current_streak || 1;
+          }
+          
+          // Update longest streak if needed
+          longestStreak = Math.max(longestStreak, newStreak);
+        }
+        
+        // Update user stats
+        const { error: updateError } = await supabase
+          .from('user_stats')
+          .upsert({
+            user_id: user.id,
+            current_streak: newStreak,
+            longest_streak: longestStreak,
+            last_activity_date: today,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+          
+        if (updateError) {
+          console.error('Error updating user stats:', updateError);
+        } else if (newStreak > 1) {
+          toast.success(`🔥 You're on a ${newStreak}-day streak!`);
+        }
+      }
+    } catch (err) {
+      console.error('Error updating last activity date:', err);
+    }
+  };
 
   // Fetch user stats when component mounts
   useEffect(() => {
@@ -70,7 +142,8 @@ const Dashboard = () => {
               total_problems_solved: 0,
               current_streak: 0,
               longest_streak: 0,
-              daily_goal: 3
+              daily_goal: 3,
+              last_activity_date: new Date().toISOString().split('T')[0] // Today
             })
             .select()
             .single();
@@ -83,13 +156,45 @@ const Dashboard = () => {
         }
 
         // Fetch topic progress data
-        const { data: topicData, error: topicError } = await supabase
-          .rpc('get_solved_problems_by_topic', { user_id_param: user.id });
+        try {
+          const { data: topicData, error: topicError } = await supabase
+            .rpc('get_solved_problems_by_topic', { user_id_param: user.id });
 
-        if (topicError) {
-          console.error('Error fetching topic progress:', topicError);
-        } else {
-          setTopicProgress(topicData || []);
+          if (topicError) {
+            console.error('Error fetching topic progress:', topicError);
+          } else {
+            setTopicProgress(topicData || []);
+          }
+        } catch (topicErr) {
+          console.error('Error in topic progress RPC call:', topicErr);
+          
+          // Fallback: fetch manually if RPC fails
+          const { data: topics } = await supabase.from('topics').select('id, name');
+          const { data: solvedProblems } = await supabase
+            .from('user_progress')
+            .select('problem_id, problems!inner(topic_id)')
+            .eq('user_id', user.id)
+            .eq('status', 'solved');
+            
+          if (topics && solvedProblems) {
+            // Count problems by topic
+            const topicCounts = new Map();
+            topics.forEach(topic => topicCounts.set(topic.id, { 
+              topic_id: topic.id, 
+              topic_name: topic.name, 
+              count: 0 
+            }));
+            
+            solvedProblems.forEach(problem => {
+              const topicId = problem.problems.topic_id;
+              if (topicId && topicCounts.has(topicId)) {
+                const topic = topicCounts.get(topicId);
+                topic.count++;
+              }
+            });
+            
+            setTopicProgress(Array.from(topicCounts.values()));
+          }
         }
 
       } catch (err) {
@@ -114,8 +219,23 @@ const Dashboard = () => {
       })
       .subscribe();
 
+    // Set up subscription for real-time updates to user_progress
+    const progressSubscription = supabase
+      .channel('user_progress_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_progress',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        // Refresh stats when user progress changes
+        fetchUserStats();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(statsSubscription);
+      supabase.removeChannel(progressSubscription);
     };
   }, [user]);
 
@@ -192,8 +312,6 @@ const Dashboard = () => {
           </div>
           
           <div className="space-y-8">
-            <LeetCodeWidget />
-            <CodolioWidget />
             <CodingStreak userStats={userStats} isLoading={statsLoading} />
             <NextProblemSuggestion isLoading={statsLoading} />
             <QuickActions />

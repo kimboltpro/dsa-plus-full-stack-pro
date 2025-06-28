@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, UserPlus, Check, Clock, AlertCircle, MessageSquare, Heart, ThumbsUp, Flame as FireIcon, Trophy, Star } from 'lucide-react';
+import { Users, UserPlus, Check, Clock, AlertCircle, MessageSquare, Heart, ThumbsUp, Flame, Trophy, Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
@@ -88,21 +88,8 @@ const mockFriends = [
   }
 ];
 
-interface CommunityUpdate {
-  id: number;
-  user: {
-    name: string;
-    avatar: string;
-    username: string;
-  };
-  action: 'solved' | 'achieved' | 'shared' | 'commented';
-  content: string;
-  reactions: number;
-  timeAgo: string;
-}
-
-// Mock data for community updates
-const mockCommunityUpdates: CommunityUpdate[] = [
+// Mock community updates
+const mockCommunityUpdates = [
   {
     id: 1,
     user: {
@@ -153,20 +140,8 @@ const mockCommunityUpdates: CommunityUpdate[] = [
   }
 ];
 
-interface LeaderboardEntry {
-  rank: number;
-  user: {
-    name: string;
-    avatar: string;
-    username: string;
-  };
-  score: number;
-  solved: number;
-  streak: number;
-}
-
-// Mock data for leaderboard
-const mockLeaderboard: LeaderboardEntry[] = [
+// Mock leaderboard data
+const mockLeaderboard = [
   {
     rank: 1,
     user: {
@@ -237,7 +212,18 @@ const FriendsActivity = () => {
     // Simulate API loading
     const timer = setTimeout(() => {
       setLoading(false);
+      
+      // Simulate user ranking
+      setUserRank(Math.floor(Math.random() * 100) + 6); // Random rank between 6-105
     }, 1000);
+    
+    // Fetch actual user data (this would use Supabase in a real implementation)
+    const fetchCommunityData = async () => {
+      // In a real app, fetch data from Supabase
+      // For now, we'll use mock data
+    };
+    
+    fetchCommunityData();
     
     return () => clearTimeout(timer);
   }, []);
@@ -336,7 +322,7 @@ const FriendsActivity = () => {
                       </div>
                       <div className="flex items-center gap-3 mt-1">
                         <Badge variant="outline">
-                          <FireIcon className="h-3 w-3 mr-1 text-orange-500" />
+                          <Flame className="h-3 w-3 mr-1 text-orange-500" />
                           {friendDetails?.streak} day streak
                         </Badge>
                         <Badge variant="outline">
@@ -409,7 +395,7 @@ const FriendsActivity = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="flex items-center gap-1">
-                          <FireIcon className="h-3 w-3 text-orange-500" />
+                          <Flame className="h-3 w-3 text-orange-500" />
                           {friend.streak}
                         </Badge>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -493,7 +479,7 @@ const FriendsActivity = () => {
                           8240 pts
                         </Badge>
                         <Badge variant="outline" className="flex items-center gap-1">
-                          <FireIcon className="h-3 w-3 text-orange-500" />
+                          <Flame className="h-3 w-3 text-orange-500" />
                           14
                         </Badge>
                       </div>
@@ -533,7 +519,7 @@ const FriendsActivity = () => {
                       <div className="flex items-center gap-2">
                         <div className="text-sm font-semibold">{entry.score} pts</div>
                         <Badge variant="outline" className="flex items-center gap-1 text-xs">
-                          <FireIcon className="h-3 w-3 text-orange-500" />
+                          <Flame className="h-3 w-3 text-orange-500" />
                           {entry.streak}
                         </Badge>
                       </div>
