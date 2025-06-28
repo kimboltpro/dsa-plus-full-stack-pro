@@ -1,380 +1,398 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { motion } from 'framer-motion';
-import { TrendingUp, Award, Link as LinkIcon, BarChart as BarChartIcon, RefreshCw, Flame, Check, X, LoaderCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Code, ExternalLink, Check, AlertCircle, BookOpen, Zap, Target, Trophy, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+interface CodolioStats {
+  id: string;
+  user_id: string;
+  username: string;
+  profile_url?: string;
+  total_solved?: number;
+  streak?: number;
+  topic_counts?: Record<string, number>;
+  ratings_timeline?: Record<string, number>;
+  platform_stats?: Record<string, any>;
+  last_fetched_at?: string;
+}
 
 const CodolioWidget = () => {
   const { user } = useAuth();
-  const [codolioStats, setCodolioStats] = useState<any>(null);
   const [codolioUsername, setCodolioUsername] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false);
+  const [codolioStats, setCodolioStats] = useState<CodolioStats | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Fetch Codolio stats when component mounts
-  useEffect(() => {
+  const fetchCodolioStats = async () => {
     if (!user) return;
 
-    const fetchCodolioStats = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Check if user has already connected Codolio
-        const { data, error } = await supabase
-          .from('codolio_stats')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-          
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching Codolio stats:', error);
-        }
-        
-        if (data) {
-          setCodolioStats(data);
-          setCodolioUsername(data.username);
-        }
-      } catch (err) {
-        console.error('Error in fetchCodolioStats:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchCodolioStats();
-    
-    // Set up real-time subscription for Codolio stats
-    const codolioSubscription = supabase
-      .channel('codolio_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'codolio_stats',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          console.log('Codolio stats changed:', payload);
-          setCodolioStats(payload.new);
-        }
-      )
-      .subscribe();
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Try to fetch existing stats first
+      const { data: existingData, error: fetchError } = await supabase
+        .from('codolio_stats')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
       
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw new Error(`Error fetching Codolio stats: ${fetchError.message}`);
+      }
+
+      if (existingData) {
+        setCodolioStats(existingData);
+        setCodolioUsername(existingData.username);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setError(error instanceof Error ? error.message : 'An unknown error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCodolioData = async () => {
+    if (!codolioUsername || !user) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Call the Supabase Edge Function
+      const functionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-codolio-stats`;
+      
+      // Get the user's session token for auth
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || ''}`,
+        },
+        body: JSON.stringify({ username: codolioUsername }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error fetching Codolio data: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Store the data in Supabase
+      const { error: upsertError } = await supabase
+        .from('codolio_stats')
+        .upsert({
+          user_id: user.id,
+          username: codolioUsername,
+          profile_url: `https://codolio.com/profile/${codolioUsername}`,
+          total_solved: data.totalSolved || 0,
+          streak: data.streak || 0,
+          topic_counts: data.topicCounts || {},
+          ratings_timeline: data.ratingsTimeline || {},
+          platform_stats: data.platformStats || {},
+        });
+
+      if (upsertError) {
+        throw new Error(`Error saving Codolio data: ${upsertError.message}`);
+      }
+
+      // Fetch the updated data
+      await fetchCodolioStats();
+      
+      toast.success('Codolio profile linked successfully!');
+      setSettingsOpen(false);
+    } catch (error) {
+      console.error('Error:', error);
+      setError(error instanceof Error ? error.message : 'An unknown error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCodolioStats();
+
+    // Set up subscription for real-time updates
+    const subscription = supabase
+      .channel('codolio-changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'codolio_stats',
+        filter: user ? `user_id=eq.${user.id}` : undefined 
+      }, (payload) => {
+        setCodolioStats(payload.new as CodolioStats);
+      })
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(codolioSubscription);
+      subscription.unsubscribe();
     };
   }, [user]);
 
-  // Function to fetch Codolio data via Supabase Edge Function
-  const fetchCodolioData = async () => {
-    if (!codolioUsername) {
-      toast.error('Please enter a Codolio username');
-      return;
-    }
+  const getTopicData = () => {
+    if (!codolioStats?.topic_counts) return [];
     
-    try {
-      setIsFetching(true);
-      
-      // Get the user's JWT token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        toast.error('Authentication required');
-        return;
-      }
-      
-      // Call the Edge Function
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-codolio-stats`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username: codolioUsername })
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch Codolio data');
-      }
-      
-      const result = await response.json();
-      
-      // Success! The function handles storing the data in Supabase
-      toast.success('Codolio profile synced successfully!');
-      setIsEditing(false);
-      
-      // Refresh data from Supabase
-      const { data, error } = await supabase
-        .from('codolio_stats')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-        
-      if (error) {
-        console.error('Error fetching updated Codolio stats:', error);
-      } else {
-        setCodolioStats(data);
-      }
-    } catch (err: any) {
-      console.error('Error fetching Codolio data:', err);
-      toast.error(err.message || 'Failed to sync Codolio profile');
-    } finally {
-      setIsFetching(false);
-    }
-  };
-
-  // Helper to format the topic data for the chart
-  const formatTopicData = (topicCounts: Record<string, number> = {}) => {
-    return Object.entries(topicCounts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
+    return Object.entries(codolioStats.topic_counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
       .slice(0, 5);
   };
 
-  // Helper to format the ratings data for the chart
-  const formatRatingsData = (ratingsTimeline: any[] = []) => {
-    return ratingsTimeline.map((item) => ({
-      date: item.date,
-      rating: item.rating
-    }));
+  const getRatingsData = () => {
+    if (!codolioStats?.ratings_timeline) return [];
+    
+    return Object.entries(codolioStats.ratings_timeline)
+      .map(([date, rating]) => ({ date, rating }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(-10);
   };
 
-  if (isLoading) {
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+  if (!user) {
     return (
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader>
           <CardTitle className="flex items-center">
-            <TrendingUp className="h-5 w-5 mr-2 text-indigo-600" />
-            <Skeleton className="h-6 w-40" />
+            <Code className="h-5 w-5 mr-2" />
+            Codolio Integration
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Skeleton className="h-32 w-full" />
-          <div className="flex gap-2">
-            <Skeleton className="h-8 w-1/2" />
-            <Skeleton className="h-8 w-1/2" />
-          </div>
+        <CardContent className="text-center py-6">
+          <p className="text-gray-500">Please sign in to view your Codolio stats</p>
         </CardContent>
       </Card>
     );
   }
-
-  // If no Codolio stats yet, show connect UI
-  if (!codolioStats || isEditing) {
-    return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center">
-            <TrendingUp className="w-5 h-5 mr-2 text-indigo-600" />
-            {isEditing ? 'Update Codolio Profile' : 'Connect Codolio Profile'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="codolio-username" className="text-sm font-medium">
-              Codolio Username
-            </label>
-            <div className="flex gap-2">
-              <Input
-                id="codolio-username"
-                placeholder="Enter your Codolio username"
-                value={codolioUsername}
-                onChange={(e) => setCodolioUsername(e.target.value)}
-                disabled={isFetching}
-              />
-              <Button 
-                onClick={fetchCodolioData} 
-                disabled={!codolioUsername || isFetching}
-              >
-                {isFetching ? (
-                  <>
-                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                    Syncing...
-                  </>
-                ) : (
-                  <>
-                    <LinkIcon className="mr-2 h-4 w-4" />
-                    Connect
-                  </>
-                )}
-              </Button>
-            </div>
-            {isEditing && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full mt-2"
-                onClick={() => setIsEditing(false)}
-                disabled={isFetching}
-              >
-                <X className="mr-2 h-4 w-4" />
-                Cancel
-              </Button>
-            )}
-          </div>
-          
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-            <h3 className="font-medium text-blue-800 flex items-center mb-2">
-              <TrendingUp className="h-4 w-4 mr-2 text-blue-600" />
-              Why connect Codolio?
-            </h3>
-            <ul className="text-sm text-blue-700 space-y-1">
-              <li className="flex items-start">
-                <Check className="h-4 w-4 mr-1 flex-shrink-0 text-blue-600" />
-                <span>Track your progress across multiple platforms</span>
-              </li>
-              <li className="flex items-start">
-                <Check className="h-4 w-4 mr-1 flex-shrink-0 text-blue-600" />
-                <span>Get insights on your strengths and weaknesses</span>
-              </li>
-              <li className="flex items-start">
-                <Check className="h-4 w-4 mr-1 flex-shrink-0 text-blue-600" />
-                <span>Share your progress with friends and potential employers</span>
-              </li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Format the data for charts
-  const topicData = formatTopicData(codolioStats.topic_counts);
-  const ratingsData = formatRatingsData(codolioStats.ratings_timeline);
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-lg flex items-center">
-            <TrendingUp className="w-5 h-5 mr-2 text-indigo-600" />
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center">
+            <Code className="h-5 w-5 mr-2" />
             Codolio Integration
           </CardTitle>
-          <Badge className="bg-green-100 text-green-800 flex items-center">
-            <Check className="w-3 h-3 mr-1" />
-            Connected
-          </Badge>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setSettingsOpen(!settingsOpen)}
+          >
+            {settingsOpen ? 'Cancel' : 'Configure'}
+          </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 pb-2">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {/* Profile summary */}
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h3 className="font-medium text-lg">{codolioStats.username}</h3>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge className="bg-blue-100 text-blue-800">
-                  {codolioStats.total_solved} Problems
-                </Badge>
-                <Badge className="bg-orange-100 text-orange-800 flex items-center">
-                  <Flame className="w-3 h-3 mr-1" />
-                  {codolioStats.streak} Streak
-                </Badge>
+      <CardContent>
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-md flex items-center">
+            <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
+
+        {settingsOpen ? (
+          <div className="space-y-4">
+            <div className="bg-blue-50 p-4 rounded-md">
+              <h3 className="font-medium mb-2 flex items-center">
+                <BookOpen className="h-4 w-4 mr-2 text-blue-600" />
+                Link Your Codolio Profile
+              </h3>
+              <p className="text-sm text-blue-700 mb-3">
+                Enter your Codolio username to sync your coding stats from multiple platforms.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Your Codolio username"
+                  value={codolioUsername}
+                  onChange={(e) => setCodolioUsername(e.target.value)}
+                  disabled={loading}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={fetchCodolioData} 
+                  disabled={loading || !codolioUsername}
+                >
+                  {loading ? 'Connecting...' : 'Connect'}
+                </Button>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setIsEditing(true)}
-              className="flex items-center"
-            >
-              <RefreshCw className="w-4 h-4 mr-1" />
-              Update
+
+            <div className="p-4 bg-gray-50 rounded-md">
+              <h4 className="text-sm font-medium mb-2">What is Codolio?</h4>
+              <p className="text-xs text-gray-600 mb-2">
+                Codolio is a platform that aggregates your coding stats from LeetCode, Codeforces, 
+                HackerRank, and other competitive programming platforms.
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs w-full" 
+                onClick={() => window.open('https://codolio.com', '_blank')}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Visit Codolio
+              </Button>
+            </div>
+          </div>
+        ) : codolioStats ? (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="font-medium text-lg">
+                  {codolioStats.username}'s Profile
+                </h3>
+                <a 
+                  href={codolioStats.profile_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:underline flex items-center"
+                >
+                  View on Codolio
+                  <ExternalLink className="h-3 w-3 ml-1" />
+                </a>
+              </div>
+              <div className="flex flex-col items-end">
+                <div className="flex items-center gap-1 text-green-600">
+                  <Check className="h-4 w-4" />
+                  <span className="font-medium">Connected</span>
+                </div>
+                <span className="text-xs text-gray-500">
+                  Last updated: {new Date(codolioStats.last_fetched_at || '').toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                <div className="text-xs text-blue-700 mb-1">Total Solved</div>
+                <div className="text-xl font-bold text-blue-900 flex items-center">
+                  {codolioStats.total_solved || 0}
+                  <BookOpen className="h-4 w-4 ml-2 text-blue-600" />
+                </div>
+              </div>
+              <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
+                <div className="text-xs text-orange-700 mb-1">Current Streak</div>
+                <div className="text-xl font-bold text-orange-900 flex items-center">
+                  {codolioStats.streak || 0} days
+                  <Zap className="h-4 w-4 ml-2 text-orange-600" />
+                </div>
+              </div>
+              <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                <div className="text-xs text-green-700 mb-1">Top Platform</div>
+                <div className="text-xl font-bold text-green-900 flex items-center">
+                  {Object.keys(codolioStats.platform_stats || {}).length > 0 
+                    ? Object.entries(codolioStats.platform_stats || {})
+                        .sort((a, b) => b[1].solved - a[1].solved)[0][0]
+                    : 'N/A'}
+                  <Target className="h-4 w-4 ml-2 text-green-600" />
+                </div>
+              </div>
+              <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                <div className="text-xs text-purple-700 mb-1">Mastery Score</div>
+                <div className="text-xl font-bold text-purple-900 flex items-center">
+                  {Math.floor(((codolioStats.total_solved || 0) * 10) + ((codolioStats.streak || 0) * 5))}
+                  <Trophy className="h-4 w-4 ml-2 text-purple-600" />
+                </div>
+              </div>
+            </div>
+
+            <Tabs defaultValue="topics">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="topics">Topic Breakdown</TabsTrigger>
+                <TabsTrigger value="ratings">Ratings Timeline</TabsTrigger>
+              </TabsList>
+              <TabsContent value="topics" className="py-4">
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={getTopicData()}>
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="value" fill="#8884d8" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-2 text-center text-xs text-gray-500">
+                  {getTopicData().length === 0 ? (
+                    "No topic data available"
+                  ) : (
+                    "Problems solved by topic"
+                  )}
+                </div>
+              </TabsContent>
+              <TabsContent value="ratings" className="py-4">
+                {getRatingsData().length > 0 ? (
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={getRatingsData()}>
+                        <XAxis dataKey="date" />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="rating" fill="#8884d8" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-64 flex items-center justify-center bg-gray-50 rounded-md">
+                    <p className="text-gray-500">No ratings data available</p>
+                  </div>
+                )}
+                <div className="mt-2 text-center text-xs text-gray-500">
+                  Rating progression over time
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs"
+                onClick={fetchCodolioStats}
+                disabled={loading}
+              >
+                <Clock className="h-3 w-3 mr-1" />
+                Refresh
+              </Button>
+              <Button 
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={() => window.open(codolioStats.profile_url, '_blank')}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                View Full Profile
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <div className="bg-blue-100 p-3 rounded-full mb-4">
+              <Code className="h-6 w-6 text-blue-600" />
+            </div>
+            <h3 className="font-medium text-lg mb-2">Connect Your Codolio Profile</h3>
+            <p className="text-gray-500 mb-4 max-w-md">
+              Link your Codolio profile to see your coding stats from LeetCode, Codeforces, and more, all in one place.
+            </p>
+            <Button onClick={() => setSettingsOpen(true)}>
+              Connect Profile
             </Button>
           </div>
-
-          {/* Tabs for different charts */}
-          <Tabs defaultValue="topics">
-            <TabsList className="w-full mb-3">
-              <TabsTrigger value="topics">
-                <BarChartIcon className="w-4 h-4 mr-1" />
-                Topics
-              </TabsTrigger>
-              <TabsTrigger value="ratings">
-                <TrendingUp className="w-4 h-4 mr-1" />
-                Ratings
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="topics" className="space-y-2">
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={topicData} layout="vertical" margin={{ top: 10, right: 10, bottom: 10, left: 60 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                    <XAxis type="number" />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} />
-                    <Tooltip 
-                      formatter={(value) => [`${value} problems`, 'Solved']}
-                      contentStyle={{ backgroundColor: 'white', border: '1px solid #ddd', borderRadius: '8px' }}
-                    />
-                    <Bar dataKey="count" fill="#3b82f6" barSize={20} radius={[0, 4, 4, 0]}>
-                      {topicData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={`hsl(${210 + index * 15}, 80%, 55%)`} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="ratings" className="space-y-2">
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={ratingsData} margin={{ top: 10, right: 10, bottom: 20, left: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="date" 
-                      tick={{ fontSize: 10 }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={50}
-                    />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value) => [`${value}`, 'Rating']}
-                      contentStyle={{ backgroundColor: 'white', border: '1px solid #ddd', borderRadius: '8px' }}
-                      labelFormatter={(label) => `Date: ${label}`}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="rating" 
-                      stroke="#8884d8" 
-                      strokeWidth={2} 
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6, stroke: 'white', strokeWidth: 2 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </motion.div>
+        )}
       </CardContent>
-      <CardFooter className="pt-0">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="w-full" 
-          onClick={() => window.open(codolioStats.profile_url, '_blank')}
-        >
-          <TrendingUp className="w-4 h-4 mr-2" />
-          View Full Profile
-        </Button>
-      </CardFooter>
     </Card>
   );
 };

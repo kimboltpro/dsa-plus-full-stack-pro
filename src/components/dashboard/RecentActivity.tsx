@@ -1,170 +1,190 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle, Clock, AlertCircle, History } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { format, formatDistance } from 'date-fns';
-import { Button } from '@/components/ui/button';
+import { CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 
-interface RecentActivityProps {
-  activities?: any[];
-  isLoading: boolean;
+interface Activity {
+  id: string;
+  problem: {
+    id: string;
+    title: string;
+    difficulty: string;
+    sheets?: {
+      name: string;
+    };
+  };
+  status: string;
+  timeAgo: string;
+  solved_at?: string;
+  attempted_at?: string;
 }
 
-const RecentActivity: React.FC<RecentActivityProps> = ({ activities = [], isLoading }) => {
+const RecentActivity = () => {
+  const { user } = useAuth();
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchRecentActivity = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const { data, error } = await supabase
+          .from('user_progress')
+          .select(`
+            *,
+            problems(
+              id,
+              title,
+              difficulty,
+              sheet_id,
+              sheets(name)
+            )
+          `)
+          .eq('user_id', user.id)
+          .order('solved_at', { ascending: false, nullsLast: true })
+          .order('attempted_at', { ascending: false, nullsLast: true })
+          .limit(5);
+        
+        if (error) throw new Error(`Error fetching recent activity: ${error.message}`);
+        
+        const formattedActivities = data.map(activity => {
+          // Calculate time ago
+          const date = activity.solved_at || activity.attempted_at;
+          let timeAgo = 'recently';
+          
+          if (date) {
+            const now = new Date();
+            const activityDate = new Date(date);
+            const diffMs = now.getTime() - activityDate.getTime();
+            const diffHrs = diffMs / (1000 * 60 * 60);
+            
+            if (diffHrs < 1) {
+              timeAgo = `${Math.floor(diffMs / (1000 * 60))} mins ago`;
+            } else if (diffHrs < 24) {
+              timeAgo = `${Math.floor(diffHrs)} hours ago`;
+            } else {
+              timeAgo = `${Math.floor(diffHrs / 24)} days ago`;
+            }
+          }
+          
+          return {
+            id: activity.id,
+            problem: {
+              id: activity.problems.id,
+              title: activity.problems.title,
+              difficulty: activity.problems.difficulty,
+              sheets: activity.problems.sheets
+            },
+            status: activity.status,
+            timeAgo,
+            solved_at: activity.solved_at,
+            attempted_at: activity.attempted_at
+          };
+        });
+        
+        setActivities(formattedActivities);
+      } catch (err) {
+        console.error('Error:', err);
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchRecentActivity();
+    
+    // Set up subscription for real-time updates
+    const subscription = supabase
+      .channel('user-progress-changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'user_progress',
+        filter: user ? `user_id=eq.${user.id}` : undefined
+      }, () => {
+        fetchRecentActivity();
+      })
+      .subscribe();
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user]);
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'solved':
-        return <CheckCircle className="h-5 w-5 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'attempted':
-        return <Clock className="h-5 w-5 text-orange-600" />;
+        return <Clock className="h-4 w-4 text-orange-600" />;
       default:
-        return <AlertCircle className="h-5 w-5 text-gray-400" />;
+        return <AlertCircle className="h-4 w-4 text-gray-400" />;
     }
   };
 
   const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty?.toLowerCase()) {
-      case 'easy': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'hard': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getTimeAgo = (timestamp: string) => {
-    if (!timestamp) return '';
-    try {
-      return formatDistance(new Date(timestamp), new Date(), { addSuffix: true });
-    } catch (e) {
-      return '';
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center">
-            <History className="h-5 w-5 mr-2 text-blue-600" />
-            Recent Activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const statusText = (status: string) => {
-    switch(status) {
-      case 'solved': return 'Solved';
-      case 'attempted': return 'Attempted';
-      case 'review': return 'Marked for review';
-      default: return status;
+    switch (difficulty.toLowerCase()) {
+      case 'easy':
+        return 'bg-green-100 text-green-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'hard':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center">
-          <History className="h-5 w-5 mr-2 text-blue-600" />
-          Recent Activity
-        </CardTitle>
+      <CardHeader>
+        <CardTitle>Recent Activity</CardTitle>
       </CardHeader>
       <CardContent>
-        <motion.div 
-          className="space-y-4"
-          initial="hidden"
-          animate="visible"
-          variants={{
-            hidden: { opacity: 0 },
-            visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
-          }}
-        >
-          {activities.length > 0 ? (
-            activities.map((activity) => (
-              <motion.div 
-                key={activity.id}
-                className="flex items-center justify-between p-3 rounded-lg border group hover:shadow-md transition-all cursor-pointer"
-                variants={{
-                  hidden: { y: 20, opacity: 0 },
-                  visible: { y: 0, opacity: 1 }
-                }}
-                whileHover={{ scale: 1.02 }}
-                onClick={() => activity.problems?.problem_url && window.open(activity.problems.problem_url, '_blank')}
-              >
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <LoadingSpinner size="md" text="Loading activities..." />
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 p-4 rounded-md text-red-600">
+            <p>{error}</p>
+          </div>
+        ) : activities.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <p>No recent activity found.</p>
+            <p className="text-sm mt-2">Solve some problems to see your activity here!</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {activities.map((activity) => (
+              <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg border">
                 <div className="flex items-center space-x-3">
                   {getStatusIcon(activity.status)}
                   <div>
-                    <div className="flex items-center">
-                      <p className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors">
-                        {activity.problems?.title || 'Unknown Problem'}
-                      </p>
-                      <Badge className={`ml-2 ${getDifficultyColor(activity.problems?.difficulty || '')}`}>
-                        {activity.problems?.difficulty || 'Unknown'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center text-xs text-gray-500">
-                      <span className="mr-2">{statusText(activity.status)}</span>
-                      {activity.problems?.sheets?.name && (
-                        <Badge variant="outline" className="text-xs">
-                          {activity.problems.sheets.name}
-                        </Badge>
-                      )}
-                    </div>
+                    <p className="font-medium text-gray-900">{activity.problem.title}</p>
+                    <p className="text-sm text-gray-500">
+                      {activity.problem.sheets ? activity.problem.sheets.name : 'Unassigned'}
+                    </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-xs text-gray-500">
-                    {getTimeAgo(activity.solved_at || activity.attempted_at)}
-                  </div>
-                  {activity.time_complexity && (
-                    <div className="text-xs text-gray-600">
-                      Time: {activity.time_complexity}
-                    </div>
-                  )}
+                <div className="flex items-center space-x-2">
+                  <Badge className={getDifficultyColor(activity.problem.difficulty)}>
+                    {activity.problem.difficulty}
+                  </Badge>
+                  <span className="text-sm text-gray-500">{activity.timeAgo}</span>
                 </div>
-              </motion.div>
-            ))
-          ) : (
-            <div className="text-center py-10 text-gray-500">
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <History className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                <p className="mb-1">No recent activity yet</p>
-                <p className="text-sm">Start solving problems to track your progress!</p>
-              </motion.div>
-            </div>
-          )}
-
-          {activities.length > 0 && (
-            <motion.div
-              variants={{
-                hidden: { opacity: 0 },
-                visible: { opacity: 1 }
-              }}
-            >
-              <Button 
-                variant="outline" 
-                className="w-full mt-2"
-                onClick={() => window.location.href = '/progress-history'}
-              >
-                View All Activity
-              </Button>
-            </motion.div>
-          )}
-        </motion.div>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

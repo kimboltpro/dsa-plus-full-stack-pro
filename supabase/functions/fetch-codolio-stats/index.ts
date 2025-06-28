@@ -1,182 +1,142 @@
-// Follow this setup guide to integrate the Deno runtime into your application:
-// https://deno.land/manual/examples/deploy_node_server
+// Follow Deno Docs for HTTP handling
+// https://deno.land/manual@v1.35.0/runtime/http_server_apis
 
-import { serve } from "npm:http";
-import { createClient } from "npm:@supabase/supabase-js";
+import { createClient } from 'npm:@supabase/supabase-js';
 
-interface CodolioProfile {
-  username: string;
-  totalSolved: number;
-  streak: number;
-  topicCounts: Record<string, number>;
-  ratingsTimeline: {
-    date: string;
-    rating: number;
-  }[];
-  platformStats: Record<string, any>;
-}
+// CORS headers for browser requests
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
-serve(async (req) => {
-  // Handle CORS
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+// Create a Supabase client with the Auth context
+async function createSupabaseClient(req: Request) {
+  const authHeader = req.headers.get('Authorization');
+
+  // Get environment variables
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+  // Create client using auth header if present, otherwise use service role key
+  const supabase = createClient(
+    supabaseUrl,
+    authHeader ? supabaseAnonKey : supabaseServiceKey,
+    {
+      global: {
+        headers: authHeader ? { Authorization: authHeader } : {},
       },
-      status: 204,
-    });
+    }
+  );
+
+  if (authHeader) {
+    // Get the user from the auth header
+    const { data, error } = await supabase.auth.getUser();
+    
+    if (error || !data?.user) {
+      throw new Error('Unauthorized: Invalid auth token');
+    }
   }
 
-  // Only allow POST requests
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      headers: { 
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
-      },
-      status: 405,
-    });
+  return supabase;
+}
+
+// Handle OPTIONS request for CORS
+function handleOptions() {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
+// Fetch Codolio profile data
+async function fetchCodolioProfile(username: string) {
+  try {
+    // Use the public Codolio API endpoint
+    const response = await fetch(`https://codolio.com/api/profile/${username}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Codolio profile: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching Codolio data:', error);
+    throw error;
+  }
+}
+
+// Transform Codolio data into our format
+function transformCodolioData(data: any) {
+  // Process and transform the data from Codolio format
+  // This implementation depends on the actual Codolio API structure
+  // This is a simplified example
+  
+  return {
+    totalSolved: data.totalSolved || 0,
+    streak: data.streak || 0,
+    topicCounts: data.topicBreakdown || {},
+    ratingsTimeline: data.ratingsHistory || {},
+    platformStats: data.platforms || {},
+  };
+}
+
+Deno.serve(async (req) => {
+  // Handle CORS
+  if (req.method === "OPTIONS") {
+    return handleOptions();
   }
 
   try {
-    // Get the request body
-    const { username } = await req.json();
+    // Only allow POST requests
+    if (req.method !== "POST") {
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
+    // Create Supabase client with auth context
+    const supabase = await createSupabaseClient(req);
+
+    // Get user information
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
+    // Parse request body
+    const { username } = await req.json();
+    
     if (!username) {
       return new Response(JSON.stringify({ error: "Username is required" }), {
-        headers: { 
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        },
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    // Get the JWT token from the request headers
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        headers: { 
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        },
-        status: 401,
-      });
-    }
-
-    const token = authHeader.split(" ")[1];
-
-    // Create Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-    // Verify the JWT token
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        headers: { 
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        },
-        status: 401,
-      });
-    }
-
+    
     // Fetch Codolio profile data
-    // In a real implementation, this would fetch from Codolio's API
-    // For this demonstration, we'll simulate a response
+    const codolioData = await fetchCodolioProfile(username);
     
-    // Mock fetch from Codolio API
-    const fetchCodolioProfile = async (username: string): Promise<CodolioProfile> => {
-      // Simulate API call latency
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Generate mock data for demonstration purposes
-      return {
-        username,
-        totalSolved: Math.floor(Math.random() * 300) + 50,
-        streak: Math.floor(Math.random() * 30) + 1,
-        topicCounts: {
-          "Arrays": Math.floor(Math.random() * 50) + 20,
-          "Strings": Math.floor(Math.random() * 40) + 15,
-          "LinkedList": Math.floor(Math.random() * 30) + 10,
-          "Trees": Math.floor(Math.random() * 25) + 5,
-          "DP": Math.floor(Math.random() * 20) + 3,
-          "Graphs": Math.floor(Math.random() * 15) + 2
-        },
-        ratingsTimeline: Array.from({ length: 10 }, (_, i) => {
-          const date = new Date();
-          date.setDate(date.getDate() - (9 - i) * 7);
-          return {
-            date: date.toISOString().split('T')[0],
-            rating: 1200 + Math.floor(Math.random() * 30) * (i + 1)
-          };
-        }),
-        platformStats: {
-          leetcode: {
-            solved: Math.floor(Math.random() * 200) + 50,
-            ranking: Math.floor(Math.random() * 10000) + 1000,
-          },
-          codeforces: {
-            rating: Math.floor(Math.random() * 500) + 1200,
-            contests: Math.floor(Math.random() * 20) + 5,
-          }
-        }
-      };
-    };
-
-    // Fetch profile data
-    const profileData = await fetchCodolioProfile(username);
+    // Transform data to our format
+    const transformedData = transformCodolioData(codolioData);
     
-    // Store the data in the codolio_stats table
-    const { data: statsData, error: statsError } = await supabase.rpc(
-      "update_codolio_stats",
-      {
-        p_user_id: user.id,
-        p_username: username,
-        p_profile_url: `https://codolio.io/${username}`,
-        p_total_solved: profileData.totalSolved,
-        p_streak: profileData.streak,
-        p_topic_counts: profileData.topicCounts,
-        p_ratings_timeline: profileData.ratingsTimeline,
-        p_platform_stats: profileData.platformStats
-      }
-    );
-
-    if (statsError) {
-      console.error("Error storing Codolio stats:", statsError);
-      return new Response(JSON.stringify({ error: "Failed to store stats" }), {
-        headers: { 
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*"
-        },
-        status: 500,
-      });
-    }
-
-    // Return the profile data
-    return new Response(JSON.stringify({ 
-      message: "Codolio stats fetched and stored successfully",
-      data: profileData
-    }), {
-      headers: { 
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
-      },
+    // Return processed data
+    return new Response(JSON.stringify(transformedData), {
       status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error in fetch-codolio-stats function:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      headers: { 
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
-      },
+    // Return error response
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
