@@ -89,7 +89,7 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ activities = [], isLoad
           }}
         >
           {activities.length > 0 ? (
-            activities.map((activity, index) => (
+            activities.map((activity) => (
               <motion.div 
                 key={activity.id}
                 className="flex items-center justify-between p-3 rounded-lg border group hover:shadow-md transition-all cursor-pointer"
@@ -123,7 +123,7 @@ const RecentActivity: React.FC<RecentActivityProps> = ({ activities = [], isLoad
                 </div>
                 <div className="text-right">
                   <div className="text-xs text-gray-500">
-                    {getTimeAgo(activity.solved_at || activity.attempted_at || activity.updated_at)}
+                    {getTimeAgo(activity.solved_at || activity.attempted_at)}
                   </div>
                   {activity.time_complexity && (
                     <div className="text-xs text-gray-600">

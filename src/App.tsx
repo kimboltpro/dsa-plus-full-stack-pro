@@ -13,6 +13,7 @@ import RoadmapPage from "./components/roadmap/RoadmapPage";
 import SheetsPage from "./components/sheets/SheetsPage";
 import ProFeaturesPage from "./components/pro/ProFeaturesPage";
 import FullStackPage from "./components/fullstack/FullStackPage";
+import CodolioPage from "./pages/CodolioPage";
 
 // Configure React Query for production
 const queryClient = new QueryClient({
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/sheets" element={<SheetsPage />} />
               <Route path="/pro" element={<ProFeaturesPage />} />
               <Route path="/fullstack" element={<FullStackPage />} />
+              <Route path="/codolio" element={<CodolioPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>

@@ -19,6 +19,7 @@ import NextProblemSuggestion from './NextProblemSuggestion';
 import CodingStreak from './CodingStreak';
 import FriendsActivity from './FriendsActivity';
 import DifficultyDistribution from './DifficultyDistribution';
+import CodolioWidget from './CodolioWidget';
 
 // Animation variants
 const containerVariants = {
@@ -134,7 +135,7 @@ const Dashboard = () => {
           }
         }
         
-        // Fetch recent activity - fixed to use solved_at instead of updated_at
+        // Fetch recent activity - Using solved_at instead of updated_at
         const { data: activity, error: activityError } = await supabase
           .from('user_progress')
           .select(`
@@ -201,9 +202,28 @@ const Dashboard = () => {
       )
       .subscribe();
 
+    // Subscribe to Codolio stats changes
+    const codolioStatsSubscription = supabase
+      .channel('codolio_stats_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'codolio_stats',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('Codolio stats changed:', payload);
+          // You can update state here if needed
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(userStatsSubscription);
       supabase.removeChannel(userProgressSubscription);
+      supabase.removeChannel(codolioStatsSubscription);
     };
   }, [user]);
 
@@ -251,7 +271,7 @@ const Dashboard = () => {
                 <div className="text-sm text-gray-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
                 {userStats?.current_streak > 0 && (
                   <div className="flex items-center gap-1 text-orange-600 font-medium">
-                    <Zap className="h-4 w-4" />
+                    <Flame className="h-4 w-4" />
                     <span>{userStats.current_streak} day streak</span>
                   </div>
                 )}
@@ -358,6 +378,10 @@ const Dashboard = () => {
           
           <motion.div className="space-y-8" variants={itemVariants}>
             <QuickActions />
+            
+            {/* Codolio Integration */}
+            <CodolioWidget />
+            
             <NextProblemSuggestion isLoading={isLoadingStats} />
             <FriendsActivity isLoading={isLoadingStats} />
             
@@ -390,7 +414,7 @@ const Dashboard = () => {
                 
                 <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/codolio')}>
                   <TrendingUp className="h-4 w-4 mr-2 text-indigo-600" />
-                  Add Codolio Profile
+                  Manage Codolio Profile
                 </Button>
               </CardContent>
             </Card>
