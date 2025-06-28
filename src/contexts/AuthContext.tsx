@@ -1,6 +1,5 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User, Session, Provider } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -10,7 +9,9 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signInWithProvider: (provider: Provider) => Promise<void>;
   signOut: () => Promise<void>;
+  updateProfile: (data: { username?: string, full_name?: string, avatar_url?: string }) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,6 +39,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Create or update user profile on login/signup
+        if (event === 'SIGNED_IN' && session?.user) {
+          createOrUpdateUserProfile(session.user);
+        }
       }
     );
 
@@ -46,11 +52,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Initial session check:', session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        createOrUpdateUserProfile(session.user);
+      }
+      
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Function to create or update user profile
+  const createOrUpdateUserProfile = async (user: User) => {
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        full_name: user.user_metadata.full_name || user.user_metadata.name,
+        avatar_url: user.user_metadata.avatar_url,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+
+    if (error) {
+      console.error('Error updating user profile:', error);
+    }
+    
+    // Also ensure user_stats record exists
+    const { error: statsError } = await supabase
+      .from('user_stats')
+      .upsert({
+        user_id: user.id,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+
+    if (statsError) {
+      console.error('Error creating user stats:', statsError);
+    }
+  };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
@@ -114,6 +153,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signInWithProvider = async (provider: Provider) => {
+    try {
+      setLoading(true);
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: redirectUrl,
+        }
+      });
+      
+      if (error) {
+        console.error(`Sign in with ${provider} error:`, error);
+        toast.error(error.message);
+      }
+    } catch (err) {
+      console.error(`Sign in with ${provider} exception:`, err);
+      toast.error('An unexpected error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -130,13 +193,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateProfile = async (data: { username?: string, full_name?: string, avatar_url?: string }) => {
+    try {
+      if (!user) {
+        return { error: new Error('User not authenticated') };
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          username: data.username,
+          full_name: data.full_name,
+          avatar_url: data.avatar_url,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (!error) {
+        toast.success('Profile updated successfully');
+      }
+
+      return { error };
+    } catch (err) {
+      console.error('Update profile error:', err);
+      return { error: err };
+    }
+  };
+
   const value = {
     user,
     session,
     loading,
     signUp,
     signIn,
+    signInWithProvider,
     signOut,
+    updateProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
