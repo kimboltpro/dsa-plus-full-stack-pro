@@ -6,7 +6,7 @@ import { CheckCircle, Clock, AlertCircle, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import { formatDistanceToNow, parseISO } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 
 interface Activity {
   id: string;

@@ -15,7 +15,7 @@ const LeetCodeWidget = () => {
   const { user } = useAuth();
   const [leetcodeUsername, setLeetcodeUsername] = useState('');
   const [leetcodeStats, setLeetcodeStats] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -46,7 +46,6 @@ const LeetCodeWidget = () => {
           setError(`Error fetching LeetCode stats: ${error.message}`);
         }
       } else if (data) {
-        console.log("Found existing LeetCode stats:", data);
         setLeetcodeStats(data);
         setLeetcodeUsername(data.username);
         setIsConnected(true);
@@ -71,36 +70,44 @@ const LeetCodeWidget = () => {
       setLoading(true);
       setError(null);
 
-      // Get user JWT
-      const { data: { session } } = await supabase.auth.getSession();
+      // Simple fetch to public LeetCode API
+      const response = await fetch(`https://leetcode-stats-api.herokuapp.com/${leetcodeUsername}`);
       
-      if (!session) {
-        setError("Not authenticated. Please login again.");
-        return;
-      }
-
-      // Call our Supabase Edge Function to fetch LeetCode data
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-leetcode-stats?username=${encodeURIComponent(leetcodeUsername)}`,
-        {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${session.access_token}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to fetch LeetCode data");
+        throw new Error("Failed to fetch LeetCode data. Please check the username and try again.");
       }
 
       const data = await response.json();
-      setLeetcodeStats(data);
-      setIsConnected(true);
-      toast.success("LeetCode account connected successfully!");
       
+      if (data.status === "error") {
+        throw new Error(data.message || "Failed to fetch LeetCode stats");
+      }
+      
+      if (data.status === "success") {
+        // Save to Supabase
+        const { error: saveError } = await supabase
+          .from('leetcode_stats')
+          .upsert({
+            user_id: user?.id,
+            username: leetcodeUsername,
+            total_solved: data.totalSolved,
+            easy_solved: data.easySolved,
+            medium_solved: data.mediumSolved,
+            hard_solved: data.hardSolved,
+            acceptance_rate: data.acceptanceRate,
+            ranking: data.ranking,
+            submission_calendar: data.submissionCalendar,
+            last_fetched_at: new Date().toISOString()
+          });
+        
+        if (saveError) {
+          throw new Error(`Failed to save LeetCode stats: ${saveError.message}`);
+        }
+        
+        setLeetcodeStats(data);
+        setIsConnected(true);
+        toast.success("LeetCode account connected successfully!");
+      }
     } catch (err: any) {
       console.error("Error connecting LeetCode account:", err);
       setError(`Failed to connect LeetCode account: ${err.message}`);
@@ -118,36 +125,43 @@ const LeetCodeWidget = () => {
     try {
       setRefreshing(true);
       setError(null);
-
-      // Get user JWT
-      const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session) {
-        setError("Not authenticated. Please login again.");
-        return;
-      }
-
-      // Call our Supabase Edge Function to refresh LeetCode data
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-leetcode-stats?username=${encodeURIComponent(leetcodeUsername)}`,
-        {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${session.access_token}`,
-            "Content-Type": "application/json"
-          }
-        }
-      );
-
+      const response = await fetch(`https://leetcode-stats-api.herokuapp.com/${leetcodeUsername}`);
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to refresh LeetCode data");
+        throw new Error("Failed to refresh LeetCode data");
       }
 
       const data = await response.json();
-      setLeetcodeStats(data);
-      toast.success("LeetCode stats refreshed!");
       
+      if (data.status === "error") {
+        throw new Error(data.message || "Failed to refresh LeetCode stats");
+      }
+      
+      if (data.status === "success") {
+        // Update in Supabase
+        const { error: updateError } = await supabase
+          .from('leetcode_stats')
+          .upsert({
+            user_id: user?.id,
+            username: leetcodeUsername,
+            total_solved: data.totalSolved,
+            easy_solved: data.easySolved,
+            medium_solved: data.mediumSolved,
+            hard_solved: data.hardSolved,
+            acceptance_rate: data.acceptanceRate,
+            ranking: data.ranking,
+            submission_calendar: data.submissionCalendar,
+            last_fetched_at: new Date().toISOString()
+          });
+        
+        if (updateError) {
+          throw new Error(`Failed to update LeetCode stats: ${updateError.message}`);
+        }
+        
+        setLeetcodeStats(data);
+        toast.success("LeetCode stats refreshed successfully!");
+      }
     } catch (err: any) {
       console.error("Error refreshing LeetCode stats:", err);
       setError(`Failed to refresh LeetCode stats: ${err.message}`);
@@ -163,12 +177,14 @@ const LeetCodeWidget = () => {
   };
 
   const renderCalendar = () => {
-    if (!leetcodeStats?.submission_calendar) {
+    if (!leetcodeStats?.submissionCalendar) {
       return null;
     }
 
     try {
-      const calendar = leetcodeStats.submission_calendar;
+      const calendar = typeof leetcodeStats.submissionCalendar === 'string' 
+        ? JSON.parse(leetcodeStats.submissionCalendar)
+        : leetcodeStats.submissionCalendar;
       
       // Get recent dates (last 7 days)
       const now = new Date();
@@ -290,14 +306,14 @@ const LeetCodeWidget = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold">{leetcodeStats.username}</h3>
+                <h3 className="font-semibold">{leetcodeUsername}</h3>
                 <div className="flex items-center mt-1">
                   <Badge variant="outline" className="text-xs">
                     Rank: {leetcodeStats.ranking > 0 ? `#${leetcodeStats.ranking.toLocaleString()}` : 'N/A'}
                   </Badge>
                   <span className="mx-2 text-gray-300">•</span>
                   <Badge variant="outline" className="text-xs">
-                    {leetcodeStats.acceptance_rate.toFixed(1)}% acceptance
+                    {leetcodeStats.acceptanceRate ? leetcodeStats.acceptanceRate.toFixed(1) : '0'}% acceptance
                   </Badge>
                 </div>
               </div>
@@ -305,7 +321,7 @@ const LeetCodeWidget = () => {
                 variant="outline" 
                 size="sm" 
                 className="flex items-center"
-                onClick={() => window.open(`https://leetcode.com/${leetcodeStats.username}`, '_blank')}
+                onClick={() => window.open(`https://leetcode.com/${leetcodeUsername}`, '_blank')}
               >
                 <ExternalLink className="h-3 w-3 mr-1" />
                 <span className="text-xs">Profile</span>
@@ -315,25 +331,25 @@ const LeetCodeWidget = () => {
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-gray-600">Total solved</span>
-                <span className="font-medium">{leetcodeStats.total_solved} / {getTotalProblems()}</span>
+                <span className="font-medium">{leetcodeStats.totalSolved || leetcodeStats.total_solved} / {getTotalProblems()}</span>
               </div>
               <Progress 
-                value={(leetcodeStats.total_solved / getTotalProblems()) * 100} 
+                value={(leetcodeStats.totalSolved || leetcodeStats.total_solved) / getTotalProblems() * 100} 
                 className="h-2" 
               />
               
               <div className="grid grid-cols-3 gap-2 mt-4">
                 <div className="p-2 bg-green-50 rounded-lg">
                   <div className="text-xs text-green-600">Easy</div>
-                  <div className="font-semibold text-green-700">{leetcodeStats.easy_solved}</div>
+                  <div className="font-semibold text-green-700">{leetcodeStats.easySolved || leetcodeStats.easy_solved}</div>
                 </div>
                 <div className="p-2 bg-yellow-50 rounded-lg">
                   <div className="text-xs text-yellow-600">Medium</div>
-                  <div className="font-semibold text-yellow-700">{leetcodeStats.medium_solved}</div>
+                  <div className="font-semibold text-yellow-700">{leetcodeStats.mediumSolved || leetcodeStats.medium_solved}</div>
                 </div>
                 <div className="p-2 bg-red-50 rounded-lg">
                   <div className="text-xs text-red-600">Hard</div>
-                  <div className="font-semibold text-red-700">{leetcodeStats.hard_solved}</div>
+                  <div className="font-semibold text-red-700">{leetcodeStats.hardSolved || leetcodeStats.hard_solved}</div>
                 </div>
               </div>
 

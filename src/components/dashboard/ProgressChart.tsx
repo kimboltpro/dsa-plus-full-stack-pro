@@ -40,45 +40,30 @@ const ProgressChart = () => {
         const { data: rpcData, error: rpcError } = await supabase
           .rpc('get_solved_problems_by_topic', { user_id_param: user?.id });
         
-        if (!rpcError) {
+        if (!rpcError && rpcData) {
           setData(rpcData);
-          setLoading(false);
           return;
         }
       } catch (rpcErr) {
         console.error('RPC function error:', rpcErr);
-        // Continue with manual query if RPC fails
       }
 
       // Fallback to manual query
-      // Fetch topic data
-      const { data: topics, error: topicsError } = await supabase
+      const { data: topics } = await supabase
         .from('topics')
         .select('id, name');
 
-      if (topicsError) {
-        throw new Error(`Error fetching topics: ${topicsError.message}`);
-      }
-
-      // Fetch user progress data by problem
-      const { data: progress, error: progressError } = await supabase
+      const { data: progress } = await supabase
         .from('user_progress')
         .select('problem_id, status')
         .eq('user_id', user?.id)
         .eq('status', 'solved');
 
-      if (progressError) {
-        throw new Error(`Error fetching progress: ${progressError.message}`);
-      }
-
-      // Fetch problems to get their topics
-      const { data: problems, error: problemsError } = await supabase
+      const { data: problems } = await supabase
         .from('problems')
         .select('id, topic_id');
 
-      if (problemsError) {
-        throw new Error(`Error fetching problems: ${problemsError.message}`);
-      }
+      if (!topics) throw new Error('Failed to fetch topics');
 
       // Calculate solved problems by topic
       const topicCounts = new Map<string, { id: string, name: string, count: number }>();
@@ -92,16 +77,18 @@ const ProgressChart = () => {
         });
       });
 
-      // Count solved problems by topic
-      progress.forEach(item => {
-        const problem = problems.find(p => p.id === item.problem_id);
-        if (problem && problem.topic_id) {
-          const topicData = topicCounts.get(problem.topic_id);
-          if (topicData) {
-            topicData.count += 1;
+      // Count solved problems by topic if progress exists
+      if (progress && problems) {
+        progress.forEach(item => {
+          const problem = problems.find(p => p.id === item.problem_id);
+          if (problem && problem.topic_id) {
+            const topicData = topicCounts.get(problem.topic_id);
+            if (topicData) {
+              topicData.count += 1;
+            }
           }
-        }
-      });
+        });
+      }
 
       // Convert to array and sort by count (descending)
       const chartData = Array.from(topicCounts.values())
@@ -115,7 +102,7 @@ const ProgressChart = () => {
       setData(chartData);
     } catch (err: any) {
       console.error('Error fetching chart data:', err);
-      setError(`Error fetching topic progress: ${err.message}`);
+      setError(`Failed to load progress data: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -147,22 +134,21 @@ const ProgressChart = () => {
 
       // Count problems solved on each date
       const dailyProgress = dates.map(date => {
-        const solvedCount = progress.filter(item => 
+        const solvedCount = progress?.filter(item => 
           item.solved_at && item.solved_at.startsWith(date)
-        ).length;
+        ).length || 0;
 
         return {
           topic_id: date, // reuse the same data structure
           topic_name: new Date(date).toLocaleDateString(undefined, { weekday: 'short' }),
-          count: solvedCount,
-          fullDate: date
+          count: solvedCount
         };
       });
 
       setData(dailyProgress);
     } catch (err: any) {
       console.error('Error fetching weekly data:', err);
-      setError(`Error fetching weekly progress: ${err.message}`);
+      setError(`Failed to load weekly progress: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -201,7 +187,7 @@ const ProgressChart = () => {
       <CardContent>
         {loading ? (
           <div className="h-80 flex items-center justify-center">
-            <LoadingSpinner size="lg" text={`Loading ${view} data...`} />
+            <LoadingSpinner size="lg" text="Loading data..." />
           </div>
         ) : error ? (
           <ErrorDisplay 
@@ -213,7 +199,7 @@ const ProgressChart = () => {
           <div className="h-80 flex items-center justify-center flex-col">
             <p className="text-gray-500 mb-4">No problem-solving data yet</p>
             <p className="text-sm text-gray-400">
-              Start solving problems to see your {view === 'topics' ? 'topic-wise' : 'weekly'} progress
+              Start solving problems to see your progress
             </p>
           </div>
         ) : (

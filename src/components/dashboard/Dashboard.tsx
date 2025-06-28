@@ -10,14 +10,13 @@ import { PageLoading } from '../common/LoadingSpinner';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
-import DifficultyDistribution from './DifficultyDistribution';
+import TopicBreakdown from './TopicBreakdown';
 import LearningCalendar from './LearningCalendar';
 import NextProblemSuggestion from './NextProblemSuggestion';
 import CodingStreak from './CodingStreak';
-import TopicBreakdown from './TopicBreakdown';
-import FriendsActivity from './FriendsActivity';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import LeetCodeWidget from './LeetCodeWidget';
 
 interface UserStats {
   total_problems_solved: number;
@@ -121,6 +120,8 @@ const Dashboard = () => {
     const fetchUserStats = async () => {
       try {
         setStatsLoading(true);
+        
+        // Fetch user stats
         const { data, error } = await supabase
           .from('user_stats')
           .select('*')
@@ -155,48 +156,72 @@ const Dashboard = () => {
           }
         }
 
-        // Fetch topic progress data
+        // Fetch topic progress data using RPC function
         try {
           const { data: topicData, error: topicError } = await supabase
-            .rpc('get_solved_problems_by_topic', { user_id_param: user.id });
+            .rpc('get_solved_problems_by_topic', { 
+              user_id_param: user.id 
+            });
 
           if (topicError) {
             console.error('Error fetching topic progress:', topicError);
-          } else {
-            setTopicProgress(topicData || []);
+            throw topicError;
+          }
+          
+          if (topicData) {
+            setTopicProgress(topicData);
           }
         } catch (topicErr) {
           console.error('Error in topic progress RPC call:', topicErr);
           
-          // Fallback: fetch manually if RPC fails
-          const { data: topics } = await supabase.from('topics').select('id, name');
-          const { data: solvedProblems } = await supabase
-            .from('user_progress')
-            .select('problem_id, problems!inner(topic_id)')
-            .eq('user_id', user.id)
-            .eq('status', 'solved');
-            
-          if (topics && solvedProblems) {
-            // Count problems by topic
-            const topicCounts = new Map();
-            topics.forEach(topic => topicCounts.set(topic.id, { 
-              topic_id: topic.id, 
-              topic_name: topic.name, 
-              count: 0 
-            }));
-            
-            solvedProblems.forEach(problem => {
-              const topicId = problem.problems.topic_id;
-              if (topicId && topicCounts.has(topicId)) {
-                const topic = topicCounts.get(topicId);
-                topic.count++;
-              }
-            });
-            
-            setTopicProgress(Array.from(topicCounts.values()));
+          // Fallback: fetch topic information manually
+          try {
+            const { data: topics } = await supabase
+              .from('topics')
+              .select('id, name')
+              .order('order_index');
+
+            const { data: userProgress } = await supabase
+              .from('user_progress')
+              .select(`
+                id,
+                problem_id,
+                problems!inner(
+                  topic_id
+                )
+              `)
+              .eq('user_id', user.id)
+              .eq('status', 'solved');
+
+            if (topics && userProgress) {
+              // Create a map to count problems by topic
+              const topicCounts = new Map();
+              
+              // Initialize all topics with 0 count
+              topics.forEach(topic => {
+                topicCounts.set(topic.id, {
+                  topic_id: topic.id,
+                  topic_name: topic.name,
+                  count: 0
+                });
+              });
+              
+              // Count problems by topic
+              userProgress.forEach(progress => {
+                const topicId = progress.problems?.topic_id;
+                if (topicId && topicCounts.has(topicId)) {
+                  const topicData = topicCounts.get(topicId);
+                  topicData.count += 1;
+                }
+              });
+              
+              // Convert map to array for the state
+              setTopicProgress(Array.from(topicCounts.values()));
+            }
+          } catch (fallbackErr) {
+            console.error('Error in fallback topic data fetch:', fallbackErr);
           }
         }
-
       } catch (err) {
         console.error('Error in fetchUserStats:', err);
       } finally {
@@ -207,8 +232,8 @@ const Dashboard = () => {
     fetchUserStats();
 
     // Set up subscription for real-time updates to user_stats
-    const statsSubscription = supabase
-      .channel('user_stats_changes')
+    const userStatsSubscription = supabase
+      .channel('user-stats-changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -221,20 +246,20 @@ const Dashboard = () => {
 
     // Set up subscription for real-time updates to user_progress
     const progressSubscription = supabase
-      .channel('user_progress_changes')
+      .channel('user-progress-changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'user_progress',
         filter: `user_id=eq.${user.id}`
       }, () => {
-        // Refresh stats when user progress changes
+        // Refresh data when user progress changes
         fetchUserStats();
       })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(statsSubscription);
+      supabase.removeChannel(userStatsSubscription);
       supabase.removeChannel(progressSubscription);
     };
   }, [user]);
@@ -274,7 +299,6 @@ const Dashboard = () => {
               <TabsList className="mb-6">
                 <TabsTrigger value="progress">Progress</TabsTrigger>
                 <TabsTrigger value="topics">Topic Breakdown</TabsTrigger>
-                <TabsTrigger value="difficulty">Difficulty</TabsTrigger>
                 <TabsTrigger value="activity">Activity Calendar</TabsTrigger>
               </TabsList>
               
@@ -295,12 +319,6 @@ const Dashboard = () => {
                 </Card>
               </TabsContent>
               
-              <TabsContent value="difficulty">
-                <Card className="p-6">
-                  <DifficultyDistribution isLoading={statsLoading} />
-                </Card>
-              </TabsContent>
-              
               <TabsContent value="activity">
                 <Card className="p-6">
                   <LearningCalendar isLoading={statsLoading} />
@@ -313,13 +331,10 @@ const Dashboard = () => {
           
           <div className="space-y-8">
             <CodingStreak userStats={userStats} isLoading={statsLoading} />
+            <LeetCodeWidget />
             <NextProblemSuggestion isLoading={statsLoading} />
             <QuickActions />
           </div>
-        </div>
-
-        <div className="mt-8">
-          <FriendsActivity />
         </div>
       </main>
     </div>

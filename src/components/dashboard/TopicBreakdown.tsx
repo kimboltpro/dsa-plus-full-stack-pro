@@ -70,9 +70,6 @@ const TopicBreakdown: React.FC<TopicBreakdownProps> = ({ topicProgress, isLoadin
         >
           <p className="mb-3">No progress data available yet.</p>
           <p>Start solving problems to see your topic breakdown!</p>
-          <Button className="mt-4" onClick={() => window.location.href = '/sheets'}>
-            Browse Problem Sheets
-          </Button>
         </motion.div>
       </div>
     );

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
-import { Brain, ExternalLink, Zap, Star, RefreshCw } from 'lucide-react';
+import { Brain, ExternalLink, Zap, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -29,93 +29,40 @@ const NextProblemSuggestion: React.FC<NextProblemSuggestionProps> = ({ isLoading
     try {
       setDataLoading(true);
       
-      // First, find user's weakest topics based on solve rate
-      // Get all topics
-      const { data: topics, error: topicsError } = await supabase
-        .from('topics')
-        .select('id, name');
-        
-      if (topicsError) throw new Error(`Error fetching topics: ${topicsError.message}`);
-      
-      // Get user's solved problems
-      const { data: solvedProblems, error: solvedError } = await supabase
+      // Get all solved and attempted problem IDs
+      const { data: solvedProblems } = await supabase
         .from('user_progress')
         .select('problem_id')
         .eq('user_id', user?.id)
         .eq('status', 'solved');
         
-      if (solvedError) throw new Error(`Error fetching solved problems: ${solvedError.message}`);
-      
-      // Get user's attempted problems
-      const { data: attemptedProblems, error: attemptedError } = await supabase
+      const { data: attemptedProblems } = await supabase
         .from('user_progress')
         .select('problem_id')
         .eq('user_id', user?.id)
         .eq('status', 'attempted');
-        
-      if (attemptedError) throw new Error(`Error fetching attempted problems: ${attemptedError.message}`);
       
-      // Create arrays of problem IDs
-      const solvedIds = solvedProblems.map(p => p.problem_id);
-      const attemptedIds = attemptedProblems.map(p => p.problem_id);
-      const progressIds = [...solvedIds, ...attemptedIds];
+      const solvedIds = solvedProblems?.map(p => p.problem_id) || [];
+      const attemptedIds = attemptedProblems?.map(p => p.problem_id) || [];
+      const excludeIds = [...solvedIds, ...attemptedIds];
       
-      // Get recommended problems - prefer problems from topics the user hasn't explored much
-      let recommendedProblems: any[] = [];
+      // Find problems the user hasn't attempted yet, prioritizing easier ones
+      const { data: newProblems, error } = await supabase
+        .from('problems')
+        .select(`
+          *,
+          topics(name),
+          sheets(name)
+        `)
+        .not('id', 'in', `(${excludeIds.join(',')})`)
+        .order('difficulty', { ascending: true }) // Start with easier problems
+        .limit(3);
       
-      // Try to get problems the user hasn't solved yet
-      if (topics && topics.length > 0) {
-        for (const topic of topics) {
-          // Skip if we already have enough recommendations
-          if (recommendedProblems.length >= 3) break;
-          
-          // Get problems for this topic
-          const { data: topicProblems, error: problemsError } = await supabase
-            .from('problems')
-            .select(`
-              *,
-              topics(name),
-              sheets(name)
-            `)
-            .eq('topic_id', topic.id)
-            .order('difficulty', { ascending: true }) // Start with easier problems
-            .limit(5);
-            
-          if (problemsError) {
-            console.error(`Error fetching problems for topic ${topic.id}:`, problemsError);
-            continue;
-          }
-          
-          // Filter out problems the user has already worked on
-          const newProblems = topicProblems.filter(p => !progressIds.includes(p.id));
-          recommendedProblems.push(...newProblems);
-          
-          // If we have enough recommendations, break
-          if (recommendedProblems.length >= 3) break;
-        }
+      if (error) {
+        throw error;
       }
       
-      // If we still need more problems, get random ones the user hasn't solved
-      if (recommendedProblems.length < 3) {
-        const { data: randomProblems, error: randomError } = await supabase
-          .from('problems')
-          .select(`
-            *,
-            topics(name),
-            sheets(name)
-          `)
-          .order('created_at', { ascending: false })
-          .limit(10);
-          
-        if (!randomError && randomProblems) {
-          const filteredRandomProblems = randomProblems.filter(p => !progressIds.includes(p.id));
-          recommendedProblems.push(...filteredRandomProblems);
-        }
-      }
-      
-      // Limit to 3 problems
-      setSuggestedProblems(recommendedProblems.slice(0, 3));
-      
+      setSuggestedProblems(newProblems || []);
     } catch (err) {
       console.error('Error fetching suggested problems:', err);
     } finally {
@@ -242,7 +189,7 @@ const NextProblemSuggestion: React.FC<NextProblemSuggestionProps> = ({ isLoading
 
         <div className="pt-2">
           <Button variant="outline" className="w-full" onClick={() => window.location.href = '/sheets'}>
-            <Star className="w-4 h-4 mr-2" />
+            <Zap className="w-4 h-4 mr-2" />
             Explore All Problems
           </Button>
         </div>
