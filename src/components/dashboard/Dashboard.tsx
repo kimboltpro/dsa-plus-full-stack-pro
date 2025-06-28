@@ -11,6 +11,7 @@ import CodolioWidget from './CodolioWidget';
 import { PageLoading } from '../common/LoadingSpinner';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card } from '@/components/ui/card';
 import DifficultyDistribution from './DifficultyDistribution';
 import LearningCalendar from './LearningCalendar';
 import NextProblemSuggestion from './NextProblemSuggestion';
