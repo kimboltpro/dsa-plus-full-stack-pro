@@ -79,18 +79,19 @@ async function fetchLeetCodeStats(username: string) {
 // Save LeetCode stats to database
 async function saveLeetCodeStats(supabase: any, userId: string, username: string, data: any) {
   try {
+    // Use lowercase column names to match database schema
     const { error } = await supabase
       .from('leetcode_stats')
       .upsert({
         user_id: userId,
         username,
-        totalSolved: data.totalSolved,
-        easySolved: data.easySolved,
-        mediumSolved: data.mediumSolved,
-        hardSolved: data.hardSolved,
-        acceptanceRate: data.acceptanceRate,
+        totalsolved: data.totalSolved,
+        easysolved: data.easySolved,
+        mediumsolved: data.mediumSolved,
+        hardsolved: data.hardSolved,
+        acceptancerate: data.acceptanceRate,
         ranking: data.ranking,
-        submissionCalendar: data.submissionCalendar || {},
+        submissioncalendar: data.submissionCalendar || {},
         last_fetched_at: new Date().toISOString()
       });
     
