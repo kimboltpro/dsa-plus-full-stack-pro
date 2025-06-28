@@ -79,12 +79,57 @@ export type Database = {
           },
         ]
       }
+      codolio_stats: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_fetched_at: string | null
+          platform_stats: Json | null
+          profile_url: string | null
+          ratings_timeline: Json | null
+          streak: number | null
+          topic_counts: Json | null
+          total_solved: number | null
+          updated_at: string | null
+          user_id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_fetched_at?: string | null
+          platform_stats?: Json | null
+          profile_url?: string | null
+          ratings_timeline?: Json | null
+          streak?: number | null
+          topic_counts?: Json | null
+          total_solved?: number | null
+          updated_at?: string | null
+          user_id: string
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_fetched_at?: string | null
+          platform_stats?: Json | null
+          profile_url?: string | null
+          ratings_timeline?: Json | null
+          streak?: number | null
+          topic_counts?: Json | null
+          total_solved?: number | null
+          updated_at?: string | null
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       interview_questions: {
         Row: {
           companies: string[] | null
           created_at: string
           description: string | null
-          difficulty: Database["public"]["Enums"]["difficulty_level"]
+          difficulty: Database["public"]["Enums"]["difficulty_enum"]
           id: string
           question_url: string | null
           title: string
@@ -94,7 +139,7 @@ export type Database = {
           companies?: string[] | null
           created_at?: string
           description?: string | null
-          difficulty: Database["public"]["Enums"]["difficulty_level"]
+          difficulty: Database["public"]["Enums"]["difficulty_enum"]
           id?: string
           question_url?: string | null
           title: string
@@ -104,7 +149,7 @@ export type Database = {
           companies?: string[] | null
           created_at?: string
           description?: string | null
-          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          difficulty?: Database["public"]["Enums"]["difficulty_enum"]
           id?: string
           question_url?: string | null
           title?: string
@@ -120,12 +165,60 @@ export type Database = {
           },
         ]
       }
+      leetcode_stats: {
+        Row: {
+          acceptance_rate: number | null
+          created_at: string | null
+          easy_solved: number | null
+          hard_solved: number | null
+          id: string
+          last_fetched_at: string | null
+          medium_solved: number | null
+          ranking: number | null
+          submission_calendar: Json | null
+          total_solved: number | null
+          updated_at: string | null
+          user_id: string
+          username: string
+        }
+        Insert: {
+          acceptance_rate?: number | null
+          created_at?: string | null
+          easy_solved?: number | null
+          hard_solved?: number | null
+          id?: string
+          last_fetched_at?: string | null
+          medium_solved?: number | null
+          ranking?: number | null
+          submission_calendar?: Json | null
+          total_solved?: number | null
+          updated_at?: string | null
+          user_id: string
+          username: string
+        }
+        Update: {
+          acceptance_rate?: number | null
+          created_at?: string | null
+          easy_solved?: number | null
+          hard_solved?: number | null
+          id?: string
+          last_fetched_at?: string | null
+          medium_solved?: number | null
+          ranking?: number | null
+          submission_calendar?: Json | null
+          total_solved?: number | null
+          updated_at?: string | null
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       problems: {
         Row: {
           companies: string[] | null
           created_at: string
           description: string | null
-          difficulty: Database["public"]["Enums"]["difficulty_level"]
+          difficulty: Database["public"]["Enums"]["difficulty_enum"]
           id: string
           order_index: number | null
           problem_url: string | null
@@ -139,7 +232,7 @@ export type Database = {
           companies?: string[] | null
           created_at?: string
           description?: string | null
-          difficulty: Database["public"]["Enums"]["difficulty_level"]
+          difficulty: Database["public"]["Enums"]["difficulty_enum"]
           id?: string
           order_index?: number | null
           problem_url?: string | null
@@ -153,7 +246,7 @@ export type Database = {
           companies?: string[] | null
           created_at?: string
           description?: string | null
-          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          difficulty?: Database["public"]["Enums"]["difficulty_enum"]
           id?: string
           order_index?: number | null
           problem_url?: string | null
@@ -216,7 +309,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
-          sheet_type: Database["public"]["Enums"]["sheet_type"]
+          sheet_type: Database["public"]["Enums"]["sheet_type_enum"]
           source_url: string | null
           total_problems: number | null
         }
@@ -225,7 +318,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
-          sheet_type: Database["public"]["Enums"]["sheet_type"]
+          sheet_type: Database["public"]["Enums"]["sheet_type_enum"]
           source_url?: string | null
           total_problems?: number | null
         }
@@ -234,7 +327,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
-          sheet_type?: Database["public"]["Enums"]["sheet_type"]
+          sheet_type?: Database["public"]["Enums"]["sheet_type_enum"]
           source_url?: string | null
           total_problems?: number | null
         }
@@ -319,7 +412,7 @@ export type Database = {
           problem_id: string
           solved_at: string | null
           space_complexity: string | null
-          status: Database["public"]["Enums"]["problem_status"]
+          status: Database["public"]["Enums"]["problem_status_enum"]
           time_complexity: string | null
           user_id: string
         }
@@ -331,7 +424,7 @@ export type Database = {
           problem_id: string
           solved_at?: string | null
           space_complexity?: string | null
-          status?: Database["public"]["Enums"]["problem_status"]
+          status?: Database["public"]["Enums"]["problem_status_enum"]
           time_complexity?: string | null
           user_id: string
         }
@@ -343,7 +436,7 @@ export type Database = {
           problem_id?: string
           solved_at?: string | null
           space_complexity?: string | null
-          status?: Database["public"]["Enums"]["problem_status"]
+          status?: Database["public"]["Enums"]["problem_status_enum"]
           time_complexity?: string | null
           user_id?: string
         }
@@ -398,12 +491,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_solved_problems_by_topic: {
+        Args: {
+          user_id_param: string
+        }
+        Returns: {
+          topic_id: string | null
+          topic_name: string
+          count: number
+        }[]
+      }
     }
     Enums: {
-      difficulty_level: "easy" | "medium" | "hard"
-      problem_status: "not_attempted" | "attempted" | "solved"
-      sheet_type:
+      difficulty_enum: "Easy" | "Medium" | "Hard"
+      problem_status_enum: "not_attempted" | "attempted" | "solved" | "review"
+      sheet_type_enum:
         | "tuf"
         | "striver"
         | "love_babbar_450"
@@ -525,9 +627,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      difficulty_level: ["easy", "medium", "hard"],
-      problem_status: ["not_attempted", "attempted", "solved"],
-      sheet_type: [
+      difficulty_enum: ["Easy", "Medium", "Hard"],
+      problem_status_enum: ["not_attempted", "attempted", "solved", "review"],
+      sheet_type_enum: [
         "tuf",
         "striver",
         "love_babbar_450",
