@@ -29,6 +29,22 @@ const ProgressChart = () => {
       setLoading(true);
       setError(null);
 
+      // Try to use the RPC function first
+      try {
+        const { data: rpcData, error: rpcError } = await supabase
+          .rpc('get_solved_problems_by_topic', { user_id: user?.id });
+        
+        if (!rpcError) {
+          setData(rpcData);
+          setLoading(false);
+          return;
+        }
+      } catch (rpcErr) {
+        console.error('RPC function error:', rpcErr);
+        // Continue with manual query if RPC fails
+      }
+
+      // Fallback to manual query
       // Fetch topic data
       const { data: topics, error: topicsError } = await supabase
         .from('topics')

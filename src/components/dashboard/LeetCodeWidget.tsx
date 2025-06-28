@@ -19,7 +19,8 @@ import {
   AlertCircle,
   CheckCircle,
   Code,
-  UserCircle
+  UserCircle,
+  ExternalLink
 } from 'lucide-react';
 
 interface LeetCodeStats {
@@ -126,6 +127,7 @@ const LeetCodeWidget: React.FC = () => {
         throw new Error('Not authenticated');
       }
 
+      // This should call our Edge Function
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-leetcode-stats?username=${username}`,
         {
@@ -490,9 +492,10 @@ const LeetCodeWidget: React.FC = () => {
                       href={`https://leetcode.com/${username}`} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
+                      className="text-blue-600 hover:underline flex items-center"
                     >
                       View Profile
+                      <ExternalLink className="h-3 w-3 ml-1" />
                     </a>
                   </div>
                 </div>
