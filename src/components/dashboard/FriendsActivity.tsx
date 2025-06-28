@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
-import { Users, Trophy, UserPlus, CheckCircle, ArrowUpRight, Medal } from 'lucide-react';
+import { Users, Trophy, UserPlus, CheckCircle, ArrowUpRight, Medal, Flame } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 interface FriendsActivityProps {

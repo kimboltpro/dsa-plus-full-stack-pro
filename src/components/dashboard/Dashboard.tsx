@@ -134,7 +134,7 @@ const Dashboard = () => {
           }
         }
         
-        // Fetch recent activity
+        // Fetch recent activity - fixed to use solved_at instead of updated_at
         const { data: activity, error: activityError } = await supabase
           .from('user_progress')
           .select(`
@@ -148,7 +148,7 @@ const Dashboard = () => {
             )
           `)
           .eq('user_id', user.id)
-          .order('updated_at', { ascending: false })
+          .order('solved_at', { ascending: false })
           .limit(5);
         
         if (activityError) {
