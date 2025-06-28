@@ -64,7 +64,7 @@ const LeetCodeWidget: React.FC = () => {
         .on(
           'postgres_changes',
           {
-            event: 'UPDATE',
+            event: '*',
             schema: 'public',
             table: 'leetcode_stats',
             filter: `user_id=eq.${user.id}`,
@@ -127,7 +127,7 @@ const LeetCodeWidget: React.FC = () => {
         throw new Error('Not authenticated');
       }
 
-      // This should call our Edge Function
+      // Call the Edge Function to fetch LeetCode stats
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-leetcode-stats?username=${username}`,
         {
