@@ -16,11 +16,11 @@ const AuthPage = () => {
   const [fullName, setFullName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redirect authenticated users to dashboard
+  // Redirect authenticated users to home page
   useEffect(() => {
     if (user && !loading) {
-      console.log('User is authenticated, redirecting to dashboard');
-      navigate('/dashboard', { replace: true });
+      console.log('User is authenticated, redirecting to home page');
+      navigate('/', { replace: true });
     }
   }, [user, loading, navigate]);
 
@@ -33,7 +33,7 @@ const AuthPage = () => {
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -46,8 +46,8 @@ const AuthPage = () => {
     const { error } = await signIn(email, password);
     
     if (!error) {
-      console.log('Sign in successful, navigating to dashboard');
-      navigate('/dashboard', { replace: true });
+      console.log('Sign in successful, navigating to home page');
+      navigate('/', { replace: true });
     }
     
     setIsSubmitting(false);
