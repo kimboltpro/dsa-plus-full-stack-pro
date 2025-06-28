@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch data from LeetCode API
+    // Fetch data from LeetCode Stats API
     const apiUrl = `https://leetcode-stats-api.herokuapp.com/${username}`;
     console.log(`Fetching LeetCode stats from ${apiUrl}`);
     
@@ -90,29 +90,46 @@ Deno.serve(async (req) => {
     }
     
     const leetcodeData = await response.json();
+    
+    if (leetcodeData.status === 'error') {
+      return new Response(
+        JSON.stringify({ error: leetcodeData.message || 'LeetCode API returned an error' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
     console.log('LeetCode data received:', leetcodeData);
     
-    // Save to database
+    // Process submission calendar to ensure it's JSON
+    let submissionCalendar = {};
+    if (leetcodeData.submissionCalendar) {
+      if (typeof leetcodeData.submissionCalendar === 'string') {
+        submissionCalendar = JSON.parse(leetcodeData.submissionCalendar);
+      } else {
+        submissionCalendar = leetcodeData.submissionCalendar;
+      }
+    }
+    
+    // Insert or update the LeetCode stats in the database
     const { data: insertData, error: insertError } = await supabase
       .from('leetcode_stats')
       .upsert({
         user_id: user.id,
         username: username,
-        total_solved: leetcodeData.totalSolved,
-        easy_solved: leetcodeData.easySolved,
-        medium_solved: leetcodeData.mediumSolved,
-        hard_solved: leetcodeData.hardSolved,
-        acceptance_rate: leetcodeData.acceptanceRate,
-        ranking: leetcodeData.ranking,
-        submission_calendar: JSON.parse(
-          typeof leetcodeData.submissionCalendar === 'string' 
-            ? leetcodeData.submissionCalendar 
-            : JSON.stringify(leetcodeData.submissionCalendar)
-        ),
+        total_solved: leetcodeData.totalSolved || 0,
+        easy_solved: leetcodeData.easySolved || 0,
+        medium_solved: leetcodeData.mediumSolved || 0,
+        hard_solved: leetcodeData.hardSolved || 0,
+        acceptance_rate: leetcodeData.acceptanceRate || 0,
+        ranking: leetcodeData.ranking || 0,
+        submission_calendar: submissionCalendar,
         last_fetched_at: new Date().toISOString()
       })
       .select();
-      
+
     if (insertError) {
       console.error('Error inserting LeetCode stats:', insertError);
       return new Response(
