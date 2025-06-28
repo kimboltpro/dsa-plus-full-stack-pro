@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Code, BookOpen, Map, Users, Target, Play, Timer, BookMarked, BarChart3, Brain, Puzzle } from 'lucide-react';
+import { Code, BookOpen, Map, Users, Target, Play, Timer, BookMarked, Brain, Puzzle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -125,7 +125,7 @@ const QuickActions = () => {
           <div className="flex overflow-x-auto pb-2 space-x-2 scrollbar-hide -mx-1 px-1">
             {actions.slice(6).map((action, index) => (
               <motion.div
-                key={index}
+                key={index + 6}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: (index + 6) * 0.05 }}

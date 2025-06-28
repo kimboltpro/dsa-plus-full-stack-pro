@@ -13,23 +13,23 @@ import {
   Zap, 
   Search, 
   LoaderCircle,
-  Calendar,
-  CircleCheck
+  Calendar
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 interface LeetCodeStats {
   id?: string;
   username: string;
-  totalsolved: number;
-  easysolved: number;
-  mediumsolved: number;
-  hardsolved: number;
+  total_solved: number;
+  easy_solved: number;
+  medium_solved: number;
+  hard_solved: number;
   ranking: number;
-  acceptancerate: number;
-  submissioncalendar?: Record<string, number>;
+  acceptance_rate: number;
+  submission_calendar?: Record<string, number>;
   last_fetched_at?: string;
 }
 
@@ -119,19 +119,19 @@ const LeetCodeWidget = () => {
         throw new Error(data.message || 'Invalid username or API error');
       }
       
-      // Store in Supabase - using lowercase column names to match database schema
+      // Store in Supabase - using snake_case column names to match database schema
       const { error: upsertError } = await supabase
         .from('leetcode_stats')
         .upsert({
           user_id: user?.id,
           username: username,
-          totalsolved: data.totalSolved,
-          easysolved: data.easySolved,
-          mediumsolved: data.mediumSolved,
-          hardsolved: data.hardSolved,
+          total_solved: data.totalSolved,
+          easy_solved: data.easySolved,
+          medium_solved: data.mediumSolved,
+          hard_solved: data.hardSolved,
           ranking: data.ranking,
-          acceptancerate: data.acceptanceRate,
-          submissioncalendar: data.submissionCalendar || {},
+          acceptance_rate: data.acceptanceRate,
+          submission_calendar: data.submissionCalendar || {},
           last_fetched_at: new Date().toISOString()
         });
 
@@ -158,17 +158,17 @@ const LeetCodeWidget = () => {
     if (!stats) return [];
     
     return [
-      { name: 'Easy', value: stats.easysolved, color: '#00B8A3' },
-      { name: 'Medium', value: stats.mediumsolved, color: '#FFC01E' },
-      { name: 'Hard', value: stats.hardsolved, color: '#FF375F' }
+      { name: 'Easy', value: stats.easy_solved, color: '#00B8A3' },
+      { name: 'Medium', value: stats.medium_solved, color: '#FFC01E' },
+      { name: 'Hard', value: stats.hard_solved, color: '#FF375F' }
     ];
   };
   
   // Parse submission calendar for recent activity
   const getSubmissionData = () => {
-    if (!stats?.submissioncalendar) return [];
+    if (!stats?.submission_calendar) return [];
     
-    const calendar = stats.submissioncalendar;
+    const calendar = stats.submission_calendar;
     return Object.entries(calendar)
       // Convert Unix timestamp (in seconds) to date
       .map(([timestamp, count]) => ({ 
@@ -250,9 +250,31 @@ const LeetCodeWidget = () => {
                 </Button>
               </div>
             </div>
+
+            <div className="p-4 bg-gray-50 rounded-md">
+              <h4 className="text-sm font-medium mb-2">What is LeetCode?</h4>
+              <p className="text-xs text-gray-600 mb-2">
+                LeetCode is a platform for preparing technical coding interviews with a vast 
+                library of algorithmic problems and real-world examples.
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-xs w-full" 
+                onClick={() => window.open('https://leetcode.com', '_blank')}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Visit LeetCode
+              </Button>
+            </div>
           </div>
         ) : stats ? (
-          <div className="space-y-4">
+          <motion.div 
+            className="space-y-4" 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
             {/* Header with username and last updated */}
             <div className="flex justify-between items-center">
               <div>
@@ -291,19 +313,19 @@ const LeetCodeWidget = () => {
             <div className="grid grid-cols-4 gap-3">
               <div className="bg-gray-50 p-3 rounded-lg text-center">
                 <div className="text-xs text-gray-500 mb-1">Total</div>
-                <div className="text-xl font-bold">{stats.totalsolved}</div>
+                <div className="text-xl font-bold">{stats.total_solved}</div>
               </div>
               <div className="bg-green-50 p-3 rounded-lg text-center">
                 <div className="text-xs text-green-600 mb-1">Easy</div>
-                <div className="text-xl font-bold text-green-700">{stats.easysolved}</div>
+                <div className="text-xl font-bold text-green-700">{stats.easy_solved}</div>
               </div>
               <div className="bg-yellow-50 p-3 rounded-lg text-center">
                 <div className="text-xs text-yellow-600 mb-1">Medium</div>
-                <div className="text-xl font-bold text-yellow-700">{stats.mediumsolved}</div>
+                <div className="text-xl font-bold text-yellow-700">{stats.medium_solved}</div>
               </div>
               <div className="bg-red-50 p-3 rounded-lg text-center">
                 <div className="text-xs text-red-600 mb-1">Hard</div>
-                <div className="text-xl font-bold text-red-700">{stats.hardsolved}</div>
+                <div className="text-xl font-bold text-red-700">{stats.hard_solved}</div>
               </div>
             </div>
 
@@ -343,7 +365,7 @@ const LeetCodeWidget = () => {
                 
                 <div className="mt-4 text-center">
                   <Badge variant="outline">
-                    Acceptance Rate: {stats.acceptancerate.toFixed(1)}%
+                    Acceptance Rate: {stats.acceptance_rate.toFixed(1)}%
                   </Badge>
                 </div>
               </TabsContent>
@@ -384,9 +406,9 @@ const LeetCodeWidget = () => {
                 <span className="font-medium">Insights</span>
               </div>
               <p className="text-xs text-blue-700">
-                {stats.hardsolved > 20 
+                {stats.hard_solved > 20 
                   ? "Impressive hard problem count! You're well-prepared for challenging interviews." 
-                  : stats.mediumsolved > stats.easysolved 
+                  : stats.medium_solved > stats.easy_solved 
                     ? "Great progress on medium difficulty problems! Try tackling more hard problems next." 
                     : "Focus on increasing your medium and hard problem count to prepare for interviews."}
               </p>
@@ -395,7 +417,7 @@ const LeetCodeWidget = () => {
             <div className="text-right text-xs text-gray-500">
               Last updated: {new Date(stats.last_fetched_at || '').toLocaleString()}
             </div>
-          </div>
+          </motion.div>
         ) : (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <div className="bg-blue-100 p-3 rounded-full mb-4">
