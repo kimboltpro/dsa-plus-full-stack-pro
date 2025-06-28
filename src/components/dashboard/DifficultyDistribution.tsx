@@ -28,41 +28,7 @@ const DifficultyDistribution: React.FC<DifficultyDistributionProps> = ({ isLoadi
       try {
         setIsDataLoading(true);
         
-        // Try to get counts by difficulty for solved problems using RPC
-        try {
-          const { data, error } = await supabase.rpc('get_solved_problems_by_difficulty', {
-            user_id: user.id
-          });
-          
-          if (error) {
-            console.error('Error fetching difficulty distribution:', error);
-            throw error;
-          }
-          
-          if (data && Array.isArray(data)) {
-            const mappedData = [
-              { name: 'Easy', value: 0, color: '#10B981' },
-              { name: 'Medium', value: 0, color: '#F59E0B' },
-              { name: 'Hard', value: 0, color: '#EF4444' }
-            ];
-            
-            data.forEach((item: any) => {
-              const difficulty = item.difficulty;
-              const index = mappedData.findIndex(d => d.name === difficulty);
-              if (index !== -1) {
-                mappedData[index].value = parseInt(item.count);
-              }
-            });
-            
-            setData(mappedData);
-          }
-          return;
-        } catch (rpcError) {
-          console.error('RPC Error:', rpcError);
-          // Fallback to manual query if RPC fails
-        }
-        
-        // Manual fallback query
+        // Manual query
         const { data: progressData, error: progressError } = await supabase
           .from('user_progress')
           .select(`

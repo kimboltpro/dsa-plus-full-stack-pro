@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { LogOut, User, Settings, ArrowLeft, Bell, Search, Menu } from 'lucide-react';
@@ -13,10 +13,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { motion } from 'framer-motion';
 
 const DashboardHeader = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -33,11 +35,17 @@ const DashboardHeader = () => {
     { name: 'Problem Sheets', href: '/sheets', current: false },
     { name: 'DSA Roadmap', href: '/roadmap', current: false },
     { name: 'Code Playground', href: '/playground', current: false },
-    { name: 'LeetCode Tracker', href: '/codolio', current: false },
+    { name: 'Codolio', href: '/codolio', current: false },
+    { name: 'Full Stack', href: '/fullstack', current: false, highlight: true },
   ];
 
   return (
-    <header className="bg-white shadow-sm border-b sticky top-0 z-40">
+    <motion.header 
+      className="bg-white shadow-sm border-b sticky top-0 z-40"
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
@@ -53,7 +61,7 @@ const DashboardHeader = () => {
             
             <div className="flex items-center flex-shrink-0">
               <div className="block lg:hidden">
-                <Sheet>
+                <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild>
                     <Button variant="ghost" size="icon">
                       <Menu className="h-5 w-5" />
@@ -75,10 +83,16 @@ const DashboardHeader = () => {
                           <Button 
                             key={item.name}
                             variant={item.current ? 'default' : 'ghost'}
-                            className="w-full justify-start"
-                            onClick={() => navigate(item.href)}
+                            className={`w-full justify-start ${item.highlight ? 'text-emerald-600 hover:text-emerald-700' : ''}`}
+                            onClick={() => {
+                              navigate(item.href);
+                              setMobileMenuOpen(false);
+                            }}
                           >
                             {item.name}
+                            {item.highlight && (
+                              <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full"></div>
+                            )}
                           </Button>
                         ))}
                       </nav>
@@ -103,25 +117,22 @@ const DashboardHeader = () => {
               </div>
             </div>
 
-            <div className="hidden md:ml-12 md:flex md:space-x-8">
+            <div className="hidden md:ml-12 md:flex md:space-x-6">
               {navigation.map((item) => (
                 <Button 
                   key={item.name} 
                   variant="ghost"
-                  className={item.current ? 'text-blue-600' : 'text-gray-600'}
+                  className={`${item.current ? 'text-blue-600' : 'text-gray-600'} ${
+                    item.highlight ? 'text-emerald-600 hover:text-emerald-700 relative' : ''
+                  }`}
                   onClick={() => navigate(item.href)}
                 >
                   {item.name}
+                  {item.highlight && (
+                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full"></div>
+                  )}
                 </Button>
               ))}
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/fullstack')}
-                className="text-emerald-600 hover:text-emerald-700 relative"
-              >
-                Full Stack
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full"></div>
-              </Button>
             </div>
           </div>
 
@@ -177,7 +188,7 @@ const DashboardHeader = () => {
           </div>
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 };
 

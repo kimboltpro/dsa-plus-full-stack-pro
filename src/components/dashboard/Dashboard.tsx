@@ -9,11 +9,14 @@ import RecentActivity from './RecentActivity';
 import { PageLoading } from '../common/LoadingSpinner';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import TopicBreakdown from './TopicBreakdown';
 import LearningCalendar from './LearningCalendar';
 import NextProblemSuggestion from './NextProblemSuggestion';
 import CodingStreak from './CodingStreak';
+import DifficultyDistribution from './DifficultyDistribution';
+import FriendsActivity from './FriendsActivity';
+import CodolioWidget from './CodolioWidget';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -155,71 +158,52 @@ const Dashboard = () => {
           }
         }
 
-        // Fetch topic progress data using RPC function
+        // Try to fetch topic progress data using manual query
         try {
-          const { data: topicData, error: topicError } = await supabase
-            .rpc('get_solved_problems_by_topic', { 
-              user_id_param: user.id 
-            });
+          const { data: topics } = await supabase
+            .from('topics')
+            .select('id, name')
+            .order('order_index');
 
-          if (topicError) {
-            console.error('Error fetching topic progress:', topicError);
-            throw topicError;
-          }
-          
-          if (topicData) {
-            setTopicProgress(topicData);
+          const { data: userProgress } = await supabase
+            .from('user_progress')
+            .select(`
+              id,
+              problem_id,
+              problems!inner(
+                topic_id
+              )
+            `)
+            .eq('user_id', user.id)
+            .eq('status', 'solved');
+
+          if (topics && userProgress) {
+            // Create a map to count problems by topic
+            const topicCounts = new Map();
+            
+            // Initialize all topics with 0 count
+            topics.forEach(topic => {
+              topicCounts.set(topic.id, {
+                topic_id: topic.id,
+                topic_name: topic.name,
+                count: 0
+              });
+            });
+            
+            // Count problems by topic
+            userProgress.forEach(progress => {
+              const topicId = progress.problems?.topic_id;
+              if (topicId && topicCounts.has(topicId)) {
+                const topicData = topicCounts.get(topicId);
+                topicData.count += 1;
+              }
+            });
+            
+            // Convert map to array for the state
+            setTopicProgress(Array.from(topicCounts.values()));
           }
         } catch (topicErr) {
-          console.error('Error in topic progress RPC call:', topicErr);
-          
-          // Fallback: fetch topic information manually
-          try {
-            const { data: topics } = await supabase
-              .from('topics')
-              .select('id, name')
-              .order('order_index');
-
-            const { data: userProgress } = await supabase
-              .from('user_progress')
-              .select(`
-                id,
-                problem_id,
-                problems!inner(
-                  topic_id
-                )
-              `)
-              .eq('user_id', user.id)
-              .eq('status', 'solved');
-
-            if (topics && userProgress) {
-              // Create a map to count problems by topic
-              const topicCounts = new Map();
-              
-              // Initialize all topics with 0 count
-              topics.forEach(topic => {
-                topicCounts.set(topic.id, {
-                  topic_id: topic.id,
-                  topic_name: topic.name,
-                  count: 0
-                });
-              });
-              
-              // Count problems by topic
-              userProgress.forEach(progress => {
-                const topicId = progress.problems?.topic_id;
-                if (topicId && topicCounts.has(topicId)) {
-                  const topicData = topicCounts.get(topicId);
-                  topicData.count += 1;
-                }
-              });
-              
-              // Convert map to array for the state
-              setTopicProgress(Array.from(topicCounts.values()));
-            }
-          } catch (fallbackErr) {
-            console.error('Error in fallback topic data fetch:', fallbackErr);
-          }
+          console.error('Error in fallback topic data fetch:', topicErr);
         }
       } catch (err) {
         console.error('Error in fetchUserStats:', err);
@@ -299,6 +283,7 @@ const Dashboard = () => {
                 <TabsTrigger value="progress">Progress</TabsTrigger>
                 <TabsTrigger value="topics">Topic Breakdown</TabsTrigger>
                 <TabsTrigger value="activity">Activity Calendar</TabsTrigger>
+                <TabsTrigger value="difficulty">Difficulty Analysis</TabsTrigger>
               </TabsList>
               
               <TabsContent value="progress">
@@ -323,6 +308,12 @@ const Dashboard = () => {
                   <LearningCalendar isLoading={statsLoading} />
                 </Card>
               </TabsContent>
+              
+              <TabsContent value="difficulty">
+                <Card className="p-6">
+                  <DifficultyDistribution isLoading={statsLoading} />
+                </Card>
+              </TabsContent>
             </Tabs>
             
             <RecentActivity />
@@ -333,6 +324,11 @@ const Dashboard = () => {
             <NextProblemSuggestion isLoading={statsLoading} />
             <QuickActions />
           </div>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+          <CodolioWidget />
+          <FriendsActivity />
         </div>
       </main>
     </div>

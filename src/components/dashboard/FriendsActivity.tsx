@@ -217,14 +217,6 @@ const FriendsActivity = () => {
       setUserRank(Math.floor(Math.random() * 100) + 6); // Random rank between 6-105
     }, 1000);
     
-    // Fetch actual user data (this would use Supabase in a real implementation)
-    const fetchCommunityData = async () => {
-      // In a real app, fetch data from Supabase
-      // For now, we'll use mock data
-    };
-    
-    fetchCommunityData();
-    
     return () => clearTimeout(timer);
   }, []);
 
@@ -272,7 +264,7 @@ const FriendsActivity = () => {
     : null;
 
   return (
-    <Card>
+    <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center">
