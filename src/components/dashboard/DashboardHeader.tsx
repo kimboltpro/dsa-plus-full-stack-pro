@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, User, Settings, ArrowLeft, Bell, Search, Menu, X, Moon, Sun, Plus } from 'lucide-react';
+import { LogOut, User, Settings, ArrowLeft, Bell, Search, Menu } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,20 +12,15 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { motion } from 'framer-motion';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const DashboardHeader = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [darkMode, setDarkMode] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/auth');
+    navigate('/');
   };
 
   const getInitials = (name: string | undefined | null) => {
@@ -33,17 +28,12 @@ const DashboardHeader = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-    // In a real app, you would also apply the dark mode theme to the document
-  };
-
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', current: true },
     { name: 'Problem Sheets', href: '/sheets', current: false },
     { name: 'DSA Roadmap', href: '/roadmap', current: false },
     { name: 'Code Playground', href: '/playground', current: false },
-    { name: 'Resources', href: '/resources', current: false },
+    { name: 'LeetCode Tracker', href: '/codolio', current: false },
   ];
 
   return (
@@ -136,29 +126,10 @@ const DashboardHeader = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            {/* Search */}
-            {searchOpen ? (
-              <motion.div 
-                initial={{ width: 0, opacity: 0 }} 
-                animate={{ width: 240, opacity: 1 }}
-                className="relative hidden md:block"
-              >
-                <Input
-                  placeholder="Search problems, topics..."
-                  className="pr-8"
-                  autoFocus
-                  onBlur={() => setSearchOpen(false)}
-                />
-                <X 
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 cursor-pointer"
-                  onClick={() => setSearchOpen(false)}
-                />
-              </motion.div>
-            ) : (
-              <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} className="hidden md:flex">
-                <Search className="h-5 w-5" />
-              </Button>
-            )}
+            {/* Search Button */}
+            <Button variant="ghost" size="icon" className="hidden md:flex">
+              <Search className="h-5 w-5" />
+            </Button>
             
             {/* Notifications */}
             <Button variant="ghost" size="icon" className="relative">
@@ -166,36 +137,6 @@ const DashboardHeader = () => {
               <Badge className="absolute -top-2 -right-1 w-5 h-5 flex items-center justify-center p-0 text-xs bg-red-500 text-white">
                 3
               </Badge>
-            </Button>
-            
-            {/* Add Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Plus className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => navigate('/playground')}>
-                  New Solution
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/notes/create')}>
-                  New Note
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/bookmarks')}>
-                  Add Bookmark
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            {/* Theme Toggle */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={toggleDarkMode}
-              className="hidden md:flex"
-            >
-              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
             
             {/* User Menu */}
@@ -211,7 +152,7 @@ const DashboardHeader = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
-                <div className="flex items-center justify-start gap-2 p-2 border-b">
+                <div className="flex items-center justify-start gap-2 p-2">
                   <div className="flex flex-col space-y-1 leading-none">
                     <p className="text-sm font-medium">{user?.user_metadata?.full_name || user?.user_metadata?.name || 'User'}</p>
                     <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
