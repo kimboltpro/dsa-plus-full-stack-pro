@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Code, LogOut, User, Settings, ArrowLeft } from 'lucide-react';
+import { LogOut, User, Settings, ArrowLeft, Bell, Search, Menu, X, Moon, Sun, Plus } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,20 +9,45 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { motion } from 'framer-motion';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const DashboardHeader = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [darkMode, setDarkMode] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/');
+    navigate('/auth');
   };
 
+  const getInitials = (name: string | undefined | null) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+    // In a real app, you would also apply the dark mode theme to the document
+  };
+
+  const navigation = [
+    { name: 'Dashboard', href: '/dashboard', current: true },
+    { name: 'Problem Sheets', href: '/sheets', current: false },
+    { name: 'DSA Roadmap', href: '/roadmap', current: false },
+    { name: 'Code Playground', href: '/playground', current: false },
+    { name: 'Resources', href: '/resources', current: false },
+  ];
+
   return (
-    <header className="bg-white shadow-sm border-b">
+    <header className="bg-white shadow-sm border-b sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
@@ -30,65 +55,185 @@ const DashboardHeader = () => {
               variant="ghost" 
               size="sm"
               onClick={() => navigate('/')}
-              className="mr-4 hover:bg-gray-100"
+              className="mr-4 hover:bg-gray-100 lg:hidden"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
+              Home
             </Button>
-            <Code className="h-8 w-8 text-blue-600 mr-3" />
-            <span className="text-xl font-bold text-gray-900">DSA Mastery Hub</span>
+            
+            <div className="flex items-center flex-shrink-0">
+              <div className="block lg:hidden">
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Menu className="h-5 w-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-[240px] sm:w-[300px]">
+                    <div className="py-6 flex flex-col h-full">
+                      <div className="px-4 flex items-center mb-6">
+                        <div className="flex-shrink-0">
+                          <User className="h-8 w-8 text-blue-600" />
+                        </div>
+                        <div className="ml-3">
+                          <div className="text-base font-medium text-gray-800">{user?.user_metadata?.name || user?.email?.split('@')[0]}</div>
+                          <div className="text-sm text-gray-500">{user?.email}</div>
+                        </div>
+                      </div>
+                      <nav className="flex-1 space-y-1 px-2">
+                        {navigation.map((item) => (
+                          <Button 
+                            key={item.name}
+                            variant={item.current ? 'default' : 'ghost'}
+                            className="w-full justify-start"
+                            onClick={() => navigate(item.href)}
+                          >
+                            {item.name}
+                          </Button>
+                        ))}
+                      </nav>
+                      <div className="px-2 pt-4 mt-auto border-t">
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                          onClick={handleSignOut}
+                        >
+                          <LogOut className="mr-2 h-4 w-4" />
+                          Sign out
+                        </Button>
+                      </div>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+              
+              <div className="hidden lg:flex items-center">
+                <User className="h-6 w-6 text-blue-600 mr-3" />
+                <span className="text-xl font-bold text-gray-900">DSA Mastery Hub</span>
+              </div>
+            </div>
+
+            <div className="hidden md:ml-12 md:flex md:space-x-8">
+              {navigation.map((item) => (
+                <Button 
+                  key={item.name} 
+                  variant="ghost"
+                  className={item.current ? 'text-blue-600' : 'text-gray-600'}
+                  onClick={() => navigate(item.href)}
+                >
+                  {item.name}
+                </Button>
+              ))}
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate('/fullstack')}
+                className="text-emerald-600 hover:text-emerald-700 relative"
+              >
+                Full Stack
+                <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full"></div>
+              </Button>
+            </div>
           </div>
 
-          <nav className="hidden md:flex space-x-8">
-            <Button variant="ghost" onClick={() => navigate('/dashboard')}>
-              Dashboard
-            </Button>
-            <Button variant="ghost" onClick={() => navigate('/sheets')}>
-              Problem Sheets
-            </Button>
-            <Button variant="ghost" onClick={() => navigate('/roadmap')}>
-              DSA Roadmap
-            </Button>
-            <Button variant="ghost" onClick={() => navigate('/playground')}>
-              Code Playground
-            </Button>
-            <Button variant="ghost" onClick={() => navigate('/resources')}>
-              Resources
-            </Button>
-          </nav>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>
-                    {user?.email?.charAt(0).toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
+          <div className="flex items-center space-x-4">
+            {/* Search */}
+            {searchOpen ? (
+              <motion.div 
+                initial={{ width: 0, opacity: 0 }} 
+                animate={{ width: 240, opacity: 1 }}
+                className="relative hidden md:block"
+              >
+                <Input
+                  placeholder="Search problems, topics..."
+                  className="pr-8"
+                  autoFocus
+                  onBlur={() => setSearchOpen(false)}
+                />
+                <X 
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 cursor-pointer"
+                  onClick={() => setSearchOpen(false)}
+                />
+              </motion.div>
+            ) : (
+              <Button variant="ghost" size="icon" onClick={() => setSearchOpen(true)} className="hidden md:flex">
+                <Search className="h-5 w-5" />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <div className="flex items-center justify-start gap-2 p-2">
-                <div className="flex flex-col space-y-1 leading-none">
-                  <p className="text-sm font-medium">{user?.email}</p>
+            )}
+            
+            {/* Notifications */}
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              <Badge className="absolute -top-2 -right-1 w-5 h-5 flex items-center justify-center p-0 text-xs bg-red-500 text-white">
+                3
+              </Badge>
+            </Button>
+            
+            {/* Add Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Plus className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => navigate('/playground')}>
+                  New Solution
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/notes/create')}>
+                  New Note
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/bookmarks')}>
+                  Add Bookmark
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            {/* Theme Toggle */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={toggleDarkMode}
+              className="hidden md:flex"
+            >
+              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
+            
+            {/* User Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.user_metadata?.avatar_url} />
+                    <AvatarFallback>
+                      {getInitials(user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email)}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <div className="flex items-center justify-start gap-2 p-2 border-b">
+                  <div className="flex flex-col space-y-1 leading-none">
+                    <p className="text-sm font-medium">{user?.user_metadata?.full_name || user?.user_metadata?.name || 'User'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                  </div>
                 </div>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/profile')}>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/settings')}>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Sign out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/settings')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     </header>
