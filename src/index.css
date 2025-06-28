@@ -102,36 +102,77 @@
   }
 }
 
-/* Fix image sizing issues */
-img {
-  max-width: 100%;
-  height: auto;
-  object-fit: contain;
+/* Avatar and image fixes */
+.avatar img, img.avatar {
+  @apply object-cover w-full h-full;
 }
 
-/* Fix for avatar images */
-.avatar img {
+/* Fix for horizontal scrolling containers */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  @apply bg-gray-100 rounded-full;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+/* Chart styling fixes */
+.recharts-wrapper .recharts-cartesian-grid-horizontal line {
+  @apply !stroke-gray-200;
+}
+
+.recharts-wrapper .recharts-cartesian-grid-vertical line {
+  @apply !stroke-gray-200;
+}
+
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  @apply !bg-white !shadow-lg !border !border-gray-200 !p-2 !rounded-md;
+}
+
+@media (max-width: 640px) {
+  .recharts-wrapper .recharts-cartesian-axis-tick text {
+    font-size: 10px;
+  }
+}
+
+/* Image styling for cards and avatars */
+.card-image, .profile-image {
+  @apply object-cover w-full h-full;
+}
+
+.avatar-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 50%;
 }
 
-/* Fix scrollbars in horizontal scroll containers */
-.scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-}
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
+.object-contain {
+  object-fit: contain;
 }
 
-/* Fix for responsive charts */
-@media (max-width: 640px) {
-  .recharts-wrapper {
-    font-size: 10px;
-  }
-  
-  .recharts-legend-item {
-    font-size: 10px;
-  }
+.object-cover {
+  object-fit: cover;
+}
+
+/* Calendar heatmap styling */
+.calendar-heatmap {
+  @apply flex flex-wrap gap-1;
+}
+
+.calendar-day {
+  @apply w-3 h-3 rounded-sm;
+}
+
+/* Focus session styling */
+.focus-timer {
+  font-variant-numeric: tabular-nums;
 }

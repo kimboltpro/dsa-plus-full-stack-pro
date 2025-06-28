@@ -1,24 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { 
-  Code, 
-  ExternalLink, 
-  AlertCircle, 
-  RefreshCw, 
-  Zap, 
-  Search, 
-  LoaderCircle,
-  Calendar
-} from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { ErrorDisplay } from '@/components/common/ErrorDisplay';
+import { 
+  Trophy, 
+  TrendingUp, 
+  BookOpen, 
+  Flame, 
+  Calendar, 
+  RefreshCw, 
+  AlertCircle,
+  CheckCircle,
+  Code,
+  UserCircle
+} from 'lucide-react';
 
 interface LeetCodeStats {
   id?: string;
@@ -27,409 +29,475 @@ interface LeetCodeStats {
   easy_solved: number;
   medium_solved: number;
   hard_solved: number;
-  ranking: number;
   acceptance_rate: number;
+  ranking: number;
   submission_calendar?: Record<string, number>;
   last_fetched_at?: string;
 }
 
-const LeetCodeWidget = () => {
+interface CalendarDay {
+  date: string;
+  count: number;
+}
+
+const LeetCodeWidget: React.FC = () => {
   const { user } = useAuth();
   const [username, setUsername] = useState('');
   const [stats, setStats] = useState<LeetCodeStats | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [recentActivity, setRecentActivity] = useState<CalendarDay[]>([]);
 
   useEffect(() => {
-    if (!user) return;
-    fetchExistingStats();
+    if (user) {
+      fetchExistingStats();
+    }
+  }, [user]);
 
-    // Set up subscription for real-time updates
-    const subscription = supabase
-      .channel('leetcode-changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'leetcode_stats',
-        filter: user ? `user_id=eq.${user.id}` : undefined 
-      }, (payload) => {
-        // Update state when data changes
-        if (payload.new) {
-          setStats(payload.new as LeetCodeStats);
-        }
-      })
-      .subscribe();
+  // Set up realtime subscription to LeetCode stats updates
+  useEffect(() => {
+    if (user) {
+      const channel = supabase
+        .channel('leetcode_updates')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'leetcode_stats',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            console.log('LeetCode stats updated:', payload);
+            setStats(payload.new as LeetCodeStats);
+            processCalendarData(payload.new.submission_calendar);
+            setIsRefreshing(false);
+          }
+        )
+        .subscribe();
 
-    return () => {
-      subscription.unsubscribe();
-    };
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user]);
 
   const fetchExistingStats = async () => {
-    if (!user) return;
-
     try {
-      setLoading(true);
+      setIsLoading(true);
       setError(null);
 
-      // Try to fetch existing stats first
-      const { data, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from('leetcode_stats')
         .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        throw new Error(`Error fetching LeetCode stats: ${fetchError.message}`);
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(`Error fetching LeetCode stats: ${error.message}`);
       }
 
       if (data) {
         setStats(data);
         setUsername(data.username);
+        processCalendarData(data.submission_calendar);
       }
     } catch (err) {
-      console.error('Error:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      console.error('Error fetching LeetCode stats:', err);
+      setError(err.message);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const fetchLeetCodeStats = async () => {
     if (!username.trim()) {
-      toast.error('Please enter a LeetCode username');
+      toast.error('Please enter your LeetCode username');
       return;
     }
 
     try {
-      setLoading(true);
+      setIsRefreshing(true);
       setError(null);
 
-      // Fetch LeetCode stats from public API
-      const response = await fetch(`https://leetcode-stats-api.herokuapp.com/${username}`);
-      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-leetcode-stats?username=${username}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch LeetCode stats: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.status === 'error' || !data.totalSolved) {
-        throw new Error(data.message || 'Invalid username or API error');
-      }
-      
-      // Store in Supabase - using snake_case column names to match database schema
-      const { error: upsertError } = await supabase
-        .from('leetcode_stats')
-        .upsert({
-          user_id: user?.id,
-          username: username,
-          total_solved: data.totalSolved,
-          easy_solved: data.easySolved,
-          medium_solved: data.mediumSolved,
-          hard_solved: data.hardSolved,
-          ranking: data.ranking,
-          acceptance_rate: data.acceptanceRate,
-          submission_calendar: data.submissionCalendar || {},
-          last_fetched_at: new Date().toISOString()
-        });
-
-      if (upsertError) {
-        throw new Error(`Error saving LeetCode data: ${upsertError.message}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch LeetCode stats');
       }
 
-      // Fetch the updated data
-      await fetchExistingStats();
+      const result = await response.json();
+      toast.success('LeetCode stats updated successfully!');
       
-      toast.success('LeetCode stats synced successfully!');
-      setSettingsOpen(false);
+      // The database will be updated via the edge function
+      // We'll receive the update via the realtime subscription
+      
     } catch (err) {
-      console.error('Error:', err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      toast.error(err instanceof Error ? err.message : 'Failed to fetch LeetCode stats');
-    } finally {
-      setLoading(false);
+      console.error('Error fetching LeetCode stats:', err);
+      setError(err.message);
+      setIsRefreshing(false);
+      toast.error('Failed to fetch LeetCode stats');
     }
   };
 
-  // Prepare difficulty distribution data for pie chart
-  const getDifficultyData = () => {
-    if (!stats) return [];
-    
-    return [
-      { name: 'Easy', value: stats.easy_solved, color: '#00B8A3' },
-      { name: 'Medium', value: stats.medium_solved, color: '#FFC01E' },
-      { name: 'Hard', value: stats.hard_solved, color: '#FF375F' }
-    ];
-  };
-  
-  // Parse submission calendar for recent activity
-  const getSubmissionData = () => {
-    if (!stats?.submission_calendar) return [];
-    
-    const calendar = stats.submission_calendar;
-    return Object.entries(calendar)
-      // Convert Unix timestamp (in seconds) to date
-      .map(([timestamp, count]) => ({ 
-        date: new Date(parseInt(timestamp) * 1000).toISOString().split('T')[0],
-        submissions: count 
-      }))
-      // Sort by date, most recent first
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      // Take most recent 10 days
-      .slice(0, 10)
-      // Reverse to show oldest first
-      .reverse();
+  const processCalendarData = (calendar?: Record<string, number>) => {
+    if (!calendar) {
+      setRecentActivity([]);
+      return;
+    }
+
+    try {
+      // Convert calendar data to array of objects with date and count
+      const activityData = Object.entries(calendar)
+        .map(([timestamp, count]) => ({
+          date: new Date(parseInt(timestamp) * 1000).toISOString().split('T')[0],
+          count: count as number,
+        }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 14); // Get last 14 days
+
+      setRecentActivity(activityData);
+    } catch (err) {
+      console.error('Error processing calendar data:', err);
+    }
   };
 
-  if (!user) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Code className="h-5 w-5 mr-2" />
-            LeetCode Stats
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center py-6">
-          <p className="text-gray-500">Please sign in to view your LeetCode stats</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const getLastUpdated = () => {
+    if (!stats?.last_fetched_at) return 'Never';
+    
+    const lastFetched = new Date(stats.last_fetched_at);
+    const now = new Date();
+    const diffMinutes = Math.floor((now.getTime() - lastFetched.getTime()) / (1000 * 60));
+    
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'} ago`;
+    
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
+    
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
+  };
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty.toLowerCase()) {
+      case 'easy':
+        return 'bg-green-100 text-green-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'hard':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card className="overflow-hidden border-2 shadow-md hover:shadow-lg transition-shadow duration-300">
+      <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50 border-b">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center">
-            <Code className="h-5 w-5 mr-2" />
-            LeetCode Stats
-          </CardTitle>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setSettingsOpen(!settingsOpen)}
-          >
-            {settingsOpen ? 'Cancel' : 'Configure'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg">
+              <Code className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">LeetCode Stats</CardTitle>
+              {stats && (
+                <p className="text-xs text-muted-foreground">
+                  Updated: {getLastUpdated()}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          {stats && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchLeetCodeStats} 
+              disabled={isRefreshing}
+              className="text-xs"
+            >
+              {isRefreshing ? (
+                <LoadingSpinner size="sm" className="mr-1" />
+              ) : (
+                <RefreshCw className="h-3 w-3 mr-1" />
+              )}
+              Refresh
+            </Button>
+          )}
         </div>
       </CardHeader>
-      <CardContent>
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 text-red-600 rounded-md flex items-center">
-            <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-            <p className="text-sm">{error}</p>
-          </div>
-        )}
 
-        {settingsOpen ? (
-          <div className="space-y-4">
-            <div className="bg-blue-50 p-4 rounded-md">
-              <h3 className="font-medium mb-2 flex items-center">
-                <Search className="h-4 w-4 mr-2 text-blue-600" />
-                Connect Your LeetCode Profile
+      <CardContent className="p-6">
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <LoadingSpinner size="lg" text="Loading LeetCode stats..." />
+          </div>
+        ) : error ? (
+          <div className="py-4">
+            <ErrorDisplay 
+              error={error} 
+              onRetry={fetchExistingStats} 
+              variant="card"
+            />
+            <div className="mt-6 border rounded-lg p-4 bg-white">
+              <h3 className="text-lg font-medium mb-4 flex items-center">
+                <UserCircle className="h-5 w-5 mr-2 text-blue-600" />
+                Connect Your LeetCode Account
               </h3>
-              <p className="text-sm text-blue-700 mb-3">
-                Enter your LeetCode username to sync your coding stats and track your progress.
-              </p>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Your LeetCode username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  disabled={loading}
-                  className="flex-1"
-                />
-                <Button 
-                  onClick={fetchLeetCodeStats} 
-                  disabled={loading || !username.trim()}
-                >
-                  {loading ? 'Connecting...' : 'Connect'}
-                </Button>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">LeetCode Username</label>
+                  <div className="flex gap-2">
+                    <Input 
+                      value={username} 
+                      onChange={(e) => setUsername(e.target.value)} 
+                      placeholder="Enter your LeetCode username"
+                      className="flex-1"
+                    />
+                    <Button 
+                      onClick={fetchLeetCodeStats} 
+                      disabled={isRefreshing || !username.trim()}
+                    >
+                      {isRefreshing ? (
+                        <LoadingSpinner size="sm" className="mr-1" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                      )}
+                      Connect
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500">
+                  We'll fetch and display your LeetCode stats for tracking progress.
+                </p>
               </div>
-            </div>
-
-            <div className="p-4 bg-gray-50 rounded-md">
-              <h4 className="text-sm font-medium mb-2">What is LeetCode?</h4>
-              <p className="text-xs text-gray-600 mb-2">
-                LeetCode is a platform for preparing technical coding interviews with a vast 
-                library of algorithmic problems and real-world examples.
-              </p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-xs w-full" 
-                onClick={() => window.open('https://leetcode.com', '_blank')}
-              >
-                <ExternalLink className="h-3 w-3 mr-1" />
-                Visit LeetCode
-              </Button>
             </div>
           </div>
-        ) : stats ? (
-          <motion.div 
-            className="space-y-4" 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            {/* Header with username and last updated */}
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="font-medium text-lg">{stats.username}'s Stats</h3>
-                <a 
-                  href={`https://leetcode.com/${stats.username}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-sm text-blue-600 hover:underline flex items-center"
-                >
-                  View on LeetCode
-                  <ExternalLink className="h-3 w-3 ml-1" />
-                </a>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-gray-700">
-                  Rank: {stats.ranking.toLocaleString()}
-                </Badge>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={fetchLeetCodeStats}
-                  disabled={loading}
-                  className="h-8 w-8 p-0"
-                >
-                  {loading ? (
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {/* Stats overview */}
-            <div className="grid grid-cols-4 gap-3">
-              <div className="bg-gray-50 p-3 rounded-lg text-center">
-                <div className="text-xs text-gray-500 mb-1">Total</div>
-                <div className="text-xl font-bold">{stats.total_solved}</div>
-              </div>
-              <div className="bg-green-50 p-3 rounded-lg text-center">
-                <div className="text-xs text-green-600 mb-1">Easy</div>
-                <div className="text-xl font-bold text-green-700">{stats.easy_solved}</div>
-              </div>
-              <div className="bg-yellow-50 p-3 rounded-lg text-center">
-                <div className="text-xs text-yellow-600 mb-1">Medium</div>
-                <div className="text-xl font-bold text-yellow-700">{stats.medium_solved}</div>
-              </div>
-              <div className="bg-red-50 p-3 rounded-lg text-center">
-                <div className="text-xs text-red-600 mb-1">Hard</div>
-                <div className="text-xl font-bold text-red-700">{stats.hard_solved}</div>
-              </div>
-            </div>
-
-            {/* Tabs for different charts */}
-            <Tabs defaultValue="distribution" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="distribution">Difficulty</TabsTrigger>
-                <TabsTrigger value="activity">Activity</TabsTrigger>
-              </TabsList>
-              
-              {/* Difficulty Distribution Tab */}
-              <TabsContent value="distribution" className="pt-4">
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={getDifficultyData()}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {getDifficultyData().map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        formatter={(value) => [`${value} problems`, 'Solved']}
-                        contentStyle={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+        ) : !stats ? (
+          <div className="border rounded-lg p-4 bg-white">
+            <h3 className="text-lg font-medium mb-4 flex items-center">
+              <UserCircle className="h-5 w-5 mr-2 text-blue-600" />
+              Connect Your LeetCode Account
+            </h3>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">LeetCode Username</label>
+                <div className="flex gap-2">
+                  <Input 
+                    value={username} 
+                    onChange={(e) => setUsername(e.target.value)} 
+                    placeholder="Enter your LeetCode username"
+                    className="flex-1"
+                  />
+                  <Button 
+                    onClick={fetchLeetCodeStats} 
+                    disabled={isRefreshing || !username.trim()}
+                  >
+                    {isRefreshing ? (
+                      <LoadingSpinner size="sm" className="mr-1" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                    )}
+                    Connect
+                  </Button>
                 </div>
-                
-                <div className="mt-4 text-center">
-                  <Badge variant="outline">
-                    Acceptance Rate: {stats.acceptance_rate.toFixed(1)}%
-                  </Badge>
-                </div>
-              </TabsContent>
-              
-              {/* Recent Activity Tab */}
-              <TabsContent value="activity" className="pt-4">
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={getSubmissionData()}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis 
-                        dataKey="date" 
-                        tick={{ fontSize: 10 }}
-                        tickFormatter={(date) => date.split('-').slice(1).join('-')}
-                      />
-                      <YAxis />
-                      <Tooltip 
-                        formatter={(value) => [`${value} submissions`, 'Count']}
-                        labelFormatter={(label) => `Date: ${label}`}
-                        contentStyle={{ backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
-                      />
-                      <Bar dataKey="submissions" fill="#8884d8" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                <div className="mt-4 text-center text-sm text-gray-500 flex items-center justify-center">
-                  <Calendar className="h-4 w-4 mr-1" />
-                  Recent submission activity
-                </div>
-              </TabsContent>
-            </Tabs>
-
-            {/* Quick stats and analysis */}
-            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-              <div className="flex items-center text-blue-800 mb-1">
-                <Zap className="h-4 w-4 mr-2 text-blue-600" />
-                <span className="font-medium">Insights</span>
               </div>
-              <p className="text-xs text-blue-700">
-                {stats.hard_solved > 20 
-                  ? "Impressive hard problem count! You're well-prepared for challenging interviews." 
-                  : stats.medium_solved > stats.easy_solved 
-                    ? "Great progress on medium difficulty problems! Try tackling more hard problems next." 
-                    : "Focus on increasing your medium and hard problem count to prepare for interviews."}
+              <p className="text-sm text-gray-500">
+                We'll fetch and display your LeetCode stats for tracking progress.
               </p>
             </div>
-            
-            <div className="text-right text-xs text-gray-500">
-              Last updated: {new Date(stats.last_fetched_at || '').toLocaleString()}
-            </div>
-          </motion.div>
+          </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-6 text-center">
-            <div className="bg-blue-100 p-3 rounded-full mb-4">
-              <Code className="h-6 w-6 text-blue-600" />
+          <div className="animate-in fade-in-50 duration-300">
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+              {/* Left Column - User Summary */}
+              <div className="md:w-1/3">
+                <div className="bg-gray-50 rounded-lg p-4 border">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-purple-500 to-indigo-500 w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                      {username.slice(0, 1).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-gray-900">{username}</h3>
+                      <div className="flex items-center text-xs text-gray-500">
+                        <Trophy className="w-3 h-3 mr-1 text-yellow-500" />
+                        Rank: {stats.ranking?.toLocaleString() || 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <div className="mb-2 flex justify-between text-sm">
+                      <span className="text-gray-600">Acceptance Rate</span>
+                      <span className="font-medium">{stats.acceptance_rate?.toFixed(1)}%</span>
+                    </div>
+                    <Progress value={stats.acceptance_rate} className="h-2" />
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3">
+                    <div className="flex items-center justify-between text-sm border-t pt-3">
+                      <span className="text-gray-600">Total Solved</span>
+                      <span className="font-medium">{stats.total_solved}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Badge className={getDifficultyColor('easy')}>Easy</Badge>
+                      </div>
+                      <span className="font-medium">{stats.easy_solved}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Badge className={getDifficultyColor('medium')}>Medium</Badge>
+                      </div>
+                      <span className="font-medium">{stats.medium_solved}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Badge className={getDifficultyColor('hard')}>Hard</Badge>
+                      </div>
+                      <span className="font-medium">{stats.hard_solved}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Right Column - Statistics & Activity */}
+              <div className="md:w-2/3">
+                <div className="bg-white rounded-lg p-4 border mb-4">
+                  <h3 className="font-medium text-gray-900 mb-3 flex items-center">
+                    <TrendingUp className="h-4 w-4 mr-2 text-blue-600" />
+                    Completion Progress
+                  </h3>
+                  
+                  <div className="relative pt-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <span className="text-xs font-semibold inline-block text-blue-600">
+                          Overall Completion
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs font-semibold inline-block text-blue-600">
+                          {((stats.total_solved / 2500) * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-100">
+                      <div 
+                        style={{ width: `${Math.min(100, (stats.total_solved / 2500) * 100)}%` }} 
+                        className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-600 transition-all duration-500"
+                      ></div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <div className="text-xs text-gray-500">Easy</div>
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden mt-1">
+                        <div 
+                          className="bg-green-500 h-full rounded-full" 
+                          style={{ width: `${Math.min(100, (stats.easy_solved / 700) * 100)}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-xs mt-1">{stats.easy_solved}/~700</div>
+                    </div>
+                    
+                    <div>
+                      <div className="text-xs text-gray-500">Medium</div>
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden mt-1">
+                        <div 
+                          className="bg-yellow-500 h-full rounded-full" 
+                          style={{ width: `${Math.min(100, (stats.medium_solved / 1450) * 100)}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-xs mt-1">{stats.medium_solved}/~1450</div>
+                    </div>
+                    
+                    <div>
+                      <div className="text-xs text-gray-500">Hard</div>
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden mt-1">
+                        <div 
+                          className="bg-red-500 h-full rounded-full" 
+                          style={{ width: `${Math.min(100, (stats.hard_solved / 350) * 100)}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-xs mt-1">{stats.hard_solved}/~350</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-lg p-4 border">
+                  <h3 className="font-medium text-gray-900 mb-3 flex items-center">
+                    <Calendar className="h-4 w-4 mr-2 text-blue-600" />
+                    Recent Activity
+                  </h3>
+                  
+                  {recentActivity.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <div className="flex min-w-max">
+                        {recentActivity.map((day) => (
+                          <div key={day.date} className="text-center mx-1 w-10">
+                            <div 
+                              className={`h-10 rounded-md flex items-center justify-center ${
+                                day.count > 0 
+                                  ? day.count > 3 
+                                    ? 'bg-green-500 text-white' 
+                                    : 'bg-green-200 text-green-800'
+                                  : 'bg-gray-100'
+                              }`}
+                            >
+                              {day.count > 0 ? day.count : ''}
+                            </div>
+                            <div className="text-xs mt-1 text-gray-500">
+                              {new Date(day.date).toLocaleDateString(undefined, { day: 'numeric', month: 'numeric' })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">
+                      <Calendar className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                      <p className="text-sm">No recent activity data available</p>
+                    </div>
+                  )}
+                  
+                  <div className="mt-4 flex justify-between text-sm text-gray-500">
+                    <div className="flex items-center">
+                      <Flame className="h-4 w-4 mr-1 text-orange-500" />
+                      {recentActivity.filter(day => day.count > 0).length} active days in the last 14 days
+                    </div>
+                    <a 
+                      href={`https://leetcode.com/${username}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      View Profile
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
-            <h3 className="font-medium text-lg mb-2">Connect Your LeetCode Profile</h3>
-            <p className="text-gray-500 mb-4 max-w-md">
-              Link your LeetCode username to track your progress and see detailed analytics.
-            </p>
-            <Button onClick={() => setSettingsOpen(true)}>
-              Connect LeetCode
-            </Button>
           </div>
         )}
       </CardContent>

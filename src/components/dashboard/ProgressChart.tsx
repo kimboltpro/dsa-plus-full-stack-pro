@@ -1,147 +1,177 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Skeleton } from '@/components/ui/skeleton';
-import { motion } from 'framer-motion';
-import { BarChart3 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { ErrorDisplay } from '@/components/common/ErrorDisplay';
 
-interface ProgressChartProps {
-  isLoading?: boolean;
+interface TopicProgress {
+  topic_id: string;
+  topic_name: string;
+  count: number;
 }
 
-const ProgressChart: React.FC<ProgressChartProps> = ({ isLoading = false }) => {
+const ProgressChart = () => {
   const { user } = useAuth();
-  const [data, setData] = React.useState([
-    { name: 'Arrays', solved: 12, total: 15 },
-    { name: 'Strings', solved: 8, total: 12 },
-    { name: 'LinkedLists', solved: 6, total: 10 },
-    { name: 'Trees', solved: 4, total: 14 },
-    { name: 'Graphs', solved: 2, total: 12 },
-    { name: 'DP', solved: 1, total: 16 },
-  ]);
-  
-  const [chartLoading, setChartLoading] = React.useState(true);
+  const [data, setData] = useState<TopicProgress[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (!user) return;
-
-    const fetchChartData = async () => {
-      try {
-        setChartLoading(true);
-        
-        // Get topic progress data using the RPC function
-        const { data: topicData, error: topicError } = await supabase.rpc('get_solved_problems_by_topic', {
-          user_id: user.id
-        });
-        
-        if (topicError) {
-          console.error('Error fetching topic progress:', topicError);
-          return;
-        }
-        
-        if (topicData && Array.isArray(topicData)) {
-          // Get total problems by topic
-          const { data: topicTotals, error: totalsError } = await supabase
-            .from('topics')
-            .select(`
-              id,
-              name,
-              problems:problems(count)
-            `);
-          
-          if (totalsError) {
-            console.error('Error fetching topic totals:', totalsError);
-            return;
-          }
-          
-          // Combine the data
-          const mappedData = topicTotals?.map(topic => {
-            const solvedCount = topicData.find(t => t.topic_id === topic.id)?.count || 0;
-            return {
-              name: topic.name,
-              solved: Number(solvedCount),
-              total: topic.problems[0].count || 0
-            };
-          }) || [];
-          
-          // Filter out topics with zero total problems and sort by total problems
-          const filteredData = mappedData
-            .filter(item => item.total > 0)
-            .sort((a, b) => b.total - a.total)
-            .slice(0, 6); // Limit to 6 topics for better visualization
-          
-          setData(filteredData.length > 0 ? filteredData : data);
-        }
-      } catch (err) {
-        console.error('Error in fetchChartData:', err);
-      } finally {
-        setChartLoading(false);
-      }
-    };
-
-    fetchChartData();
+  useEffect(() => {
+    if (user) {
+      fetchChartData();
+    }
   }, [user]);
 
-  if (isLoading || chartLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
-            Topic Progress
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-64 w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
+  const fetchChartData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch topic data
+      const { data: topics, error: topicsError } = await supabase
+        .from('topics')
+        .select('id, name');
+
+      if (topicsError) {
+        throw new Error(`Error fetching topics: ${topicsError.message}`);
+      }
+
+      // Fetch user progress data by problem
+      const { data: progress, error: progressError } = await supabase
+        .from('user_progress')
+        .select('problem_id, status')
+        .eq('user_id', user?.id)
+        .eq('status', 'solved');
+
+      if (progressError) {
+        throw new Error(`Error fetching progress: ${progressError.message}`);
+      }
+
+      // Fetch problems to get their topics
+      const { data: problems, error: problemsError } = await supabase
+        .from('problems')
+        .select('id, topic_id');
+
+      if (problemsError) {
+        throw new Error(`Error fetching problems: ${problemsError.message}`);
+      }
+
+      // Calculate solved problems by topic
+      const topicCounts = new Map<string, { id: string, name: string, count: number }>();
+      
+      // Initialize with all topics having 0 solved problems
+      topics.forEach(topic => {
+        topicCounts.set(topic.id, { 
+          id: topic.id, 
+          name: topic.name, 
+          count: 0 
+        });
+      });
+
+      // Count solved problems by topic
+      progress.forEach(item => {
+        const problem = problems.find(p => p.id === item.problem_id);
+        if (problem && problem.topic_id) {
+          const topicData = topicCounts.get(problem.topic_id);
+          if (topicData) {
+            topicData.count += 1;
+          }
+        }
+      });
+
+      // Convert to array and sort by count (descending)
+      const chartData = Array.from(topicCounts.values())
+        .map(item => ({
+          topic_id: item.id,
+          topic_name: item.name,
+          count: item.count
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      setData(chartData);
+    } catch (err) {
+      console.error('Error fetching chart data:', err);
+      setError(`Error fetching topic progress: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Generate colors for bars
+  const getBarColor = (index: number) => {
+    const colors = [
+      '#3b82f6', '#10b981', '#f59e0b', '#ef4444', 
+      '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'
+    ];
+    return colors[index % colors.length];
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
-          Topic Progress
-        </CardTitle>
+        <CardTitle>Topic-wise Progress</CardTitle>
       </CardHeader>
       <CardContent>
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="h-64"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 30 }}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="name" 
-                angle={-45}
-                textAnchor="end"
-                height={60}
-                tick={{ fontSize: 12 }}
-              />
-              <YAxis />
-              <Tooltip 
-                formatter={(value, name) => [value, name === 'solved' ? 'Solved' : 'Total']}
-                contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #ddd' }}
-              />
-              <Bar dataKey="solved" name="Solved" radius={[4, 4, 0, 0]}>
-                {data.map((entry, index) => (
-                  <Cell key={`cell-solved-${index}`} fill="#3b82f6" />
-                ))}
-              </Bar>
-              <Bar dataKey="total" name="Total" radius={[4, 4, 0, 0]}>
-                {data.map((entry, index) => (
-                  <Cell key={`cell-total-${index}`} fill="#e5e7eb" />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </motion.div>
+        {loading ? (
+          <div className="h-80 flex items-center justify-center">
+            <LoadingSpinner size="lg" text="Loading progress data..." />
+          </div>
+        ) : error ? (
+          <ErrorDisplay 
+            error={error} 
+            onRetry={fetchChartData} 
+            variant="card"
+          />
+        ) : data.length === 0 ? (
+          <div className="h-80 flex items-center justify-center flex-col">
+            <p className="text-gray-500 mb-4">No problem-solving data yet</p>
+            <p className="text-sm text-gray-400">
+              Start solving problems to see your progress by topic
+            </p>
+          </div>
+        ) : (
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart 
+                data={data} 
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                barSize={35}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                <XAxis 
+                  dataKey="topic_name" 
+                  angle={-45} 
+                  textAnchor="end"
+                  height={70}
+                  tickMargin={20}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis allowDecimals={false} />
+                <Tooltip
+                  cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                  contentStyle={{ 
+                    borderRadius: '8px', 
+                    border: '1px solid #e5e7eb',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+                  }}
+                  formatter={(value) => [`${value} Problems`, 'Solved']}
+                  labelFormatter={(label) => `Topic: ${label}`}
+                />
+                <Bar 
+                  dataKey="count" 
+                  name="Solved Problems"
+                  radius={[4, 4, 0, 0]}
+                >
+                  {data.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={getBarColor(index)} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

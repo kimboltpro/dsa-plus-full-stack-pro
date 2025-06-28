@@ -1,171 +1,178 @@
-// Follow Deno Docs for HTTP handling
-// https://deno.land/manual@v1.35.0/runtime/http_server_apis
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'npm:@supabase/supabase-js@2.32.0';
 
-import { createClient } from 'npm:@supabase/supabase-js';
+interface LeetCodeResponse {
+  totalSolved: number;
+  easySolved: number;
+  mediumSolved: number;
+  hardSolved: number;
+  acceptanceRate: number;
+  ranking: number;
+  contributionPoints: number;
+  reputation: number;
+  submissionCalendar: string; // JSON string
+}
 
-// CORS headers for browser requests
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+interface LeetCodeStats {
+  username: string;
+  total_solved: number;
+  easy_solved: number;
+  medium_solved: number;
+  hard_solved: number;
+  acceptance_rate: number;
+  ranking: number;
+  submission_calendar: Record<string, number>;
+}
 
-// Create a Supabase client with the Auth context
-async function createSupabaseClient(req: Request) {
-  const authHeader = req.headers.get('Authorization');
-
-  // Get environment variables
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-
-  // Create client using auth header if present, otherwise use service role key
-  const supabase = createClient(
-    supabaseUrl,
-    authHeader ? supabaseAnonKey : supabaseServiceKey,
-    {
-      global: {
-        headers: authHeader ? { Authorization: authHeader } : {},
+serve(async (req) => {
+  // CORS headers for preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
-    }
-  );
-
-  if (authHeader) {
-    // Get the user from the auth header
-    const { data, error } = await supabase.auth.getUser();
-    
-    if (error || !data?.user) {
-      throw new Error('Unauthorized: Invalid auth token');
-    }
+    });
   }
 
-  return supabase;
-}
+  // Extract username from request
+  const url = new URL(req.url);
+  const username = url.searchParams.get('username');
+  
+  if (!username) {
+    return new Response(
+      JSON.stringify({ error: 'Username is required' }),
+      {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
+    );
+  }
 
-// Handle OPTIONS request for CORS
-function handleOptions() {
-  return new Response(null, {
-    status: 204,
-    headers: corsHeaders,
-  });
-}
-
-// Fetch LeetCode profile data
-async function fetchLeetCodeStats(username: string) {
   try {
-    // Use the LeetCode Stats API
+    // Create Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Get the user ID from the authorization header
+    const authHeader = req.headers.get('Authorization') || '';
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Verify the JWT token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized request' }),
+        {
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+        }
+      );
+    }
+    
+    // Fetch data from LeetCode API
     const apiUrl = `https://leetcode-stats-api.herokuapp.com/${username}`;
     const response = await fetch(apiUrl);
     
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch LeetCode stats: ${errorText}`);
+      return new Response(
+        JSON.stringify({ error: `Failed to fetch LeetCode stats: ${response.statusText}` }),
+        {
+          status: response.status,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+        }
+      );
     }
     
-    const data = await response.json();
+    const leetcodeData = await response.json() as LeetCodeResponse;
     
-    // Check for API error response
-    if (data.status === 'error') {
-      throw new Error(data.message || 'Invalid LeetCode username');
+    // Transform submission calendar from string to JSON if needed
+    let submissionCalendar: Record<string, number>;
+    if (typeof leetcodeData.submissionCalendar === 'string') {
+      submissionCalendar = JSON.parse(leetcodeData.submissionCalendar);
+    } else {
+      submissionCalendar = leetcodeData.submissionCalendar as unknown as Record<string, number>;
     }
     
-    return data;
-  } catch (error) {
-    console.error('Error fetching LeetCode data:', error);
-    throw error;
-  }
-}
-
-// Save LeetCode stats to database
-async function saveLeetCodeStats(supabase: any, userId: string, username: string, data: any) {
-  try {
-    // Use snake_case column names to match database schema
-    const { error } = await supabase
+    // Format the data to match our database schema
+    const leetcodeStats: LeetCodeStats = {
+      username: username,
+      total_solved: leetcodeData.totalSolved,
+      easy_solved: leetcodeData.easySolved,
+      medium_solved: leetcodeData.mediumSolved,
+      hard_solved: leetcodeData.hardSolved,
+      acceptance_rate: leetcodeData.acceptanceRate,
+      ranking: leetcodeData.ranking,
+      submission_calendar: submissionCalendar,
+    };
+    
+    // Store the stats in the database
+    const { data: insertData, error: insertError } = await supabase
       .from('leetcode_stats')
       .upsert({
-        user_id: userId,
-        username,
-        total_solved: data.totalSolved,
-        easy_solved: data.easySolved,
-        medium_solved: data.mediumSolved,
-        hard_solved: data.hardSolved,
-        acceptance_rate: data.acceptanceRate,
-        ranking: data.ranking,
-        submission_calendar: data.submissionCalendar || {},
+        user_id: user.id,
+        username: leetcodeStats.username,
+        total_solved: leetcodeStats.total_solved,
+        easy_solved: leetcodeStats.easy_solved,
+        medium_solved: leetcodeStats.medium_solved,
+        hard_solved: leetcodeStats.hard_solved,
+        acceptance_rate: leetcodeStats.acceptance_rate,
+        ranking: leetcodeStats.ranking,
+        submission_calendar: leetcodeStats.submission_calendar,
         last_fetched_at: new Date().toISOString()
-      });
+      }, { onConflict: 'user_id,username' })
+      .select('*')
+      .single();
     
-    if (error) throw error;
+    if (insertError) {
+      return new Response(
+        JSON.stringify({ error: `Failed to store LeetCode stats: ${insertError.message}` }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+        }
+      );
+    }
     
-    return true;
+    return new Response(
+      JSON.stringify({ success: true, data: leetcodeStats }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
+    );
+    
   } catch (error) {
-    console.error('Error saving LeetCode stats:', error);
-    throw error;
-  }
-}
-
-Deno.serve(async (req) => {
-  // Handle CORS
-  if (req.method === "OPTIONS") {
-    return handleOptions();
-  }
-
-  try {
-    // Only allow POST requests
-    if (req.method !== "POST") {
-      return new Response(JSON.stringify({ error: "Method not allowed" }), {
-        status: 405,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Create Supabase client with auth context
-    const supabase = await createSupabaseClient(req);
-
-    // Get user information
-    const { data: { user } } = await supabase.auth.getUser();
+    console.error('Error in LeetCode stats edge function:', error);
     
-    if (!user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    
-    // Parse request body
-    const { username } = await req.json();
-    
-    if (!username) {
-      return new Response(JSON.stringify({ error: "Username is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    
-    // Fetch LeetCode stats
-    const leetCodeData = await fetchLeetCodeStats(username);
-    
-    // Save stats to database
-    await saveLeetCodeStats(supabase, user.id, username, leetCodeData);
-    
-    // Return processed data
-    return new Response(JSON.stringify({
-      success: true,
-      data: leetCodeData
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (error) {
-    console.error('Error in request:', error);
-    
-    // Return error response
-    return new Response(JSON.stringify({ 
-      success: false,
-      error: error.message || 'An unknown error occurred' 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: `Internal server error: ${error.message}` }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
+    );
   }
 });
