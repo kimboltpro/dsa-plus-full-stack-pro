@@ -24,6 +24,29 @@ export const useAuth = () => {
   return context;
 };
 
+// Utility function to retry failed requests
+const retryRequest = async <T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  delay: number = 1000
+): Promise<T> => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      console.warn(`Attempt ${attempt} failed:`, error);
+      
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, delay * attempt));
+    }
+  }
+  throw new Error('Max retries reached');
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -63,49 +86,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  // Function to create or update user profile
+  // Function to create or update user profile with improved error handling
   const createOrUpdateUserProfile = async (user: User) => {
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({
-        id: user.id,
-        full_name: user.user_metadata.full_name || user.user_metadata.name,
-        avatar_url: user.user_metadata.avatar_url,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'id' });
+    try {
+      console.log('Creating/updating user profile for:', user.id);
+      
+      // Update user profile with retry logic
+      await retryRequest(async () => {
+        const { error } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            full_name: user.user_metadata.full_name || user.user_metadata.name,
+            avatar_url: user.user_metadata.avatar_url,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' });
 
-    if (error) {
+        if (error) {
+          console.error('Profile upsert error:', error);
+          throw error;
+        }
+      });
+
+      console.log('Profile updated successfully');
+      
+      // Also ensure user_stats record exists with retry logic
+      await retryRequest(async () => {
+        const { error: statsError } = await supabase
+          .from('user_stats')
+          .upsert({
+            user_id: user.id,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+
+        if (statsError) {
+          console.error('User stats upsert error:', statsError);
+          throw statsError;
+        }
+      });
+
+      console.log('User stats updated successfully');
+      
+    } catch (error) {
       console.error('Error updating user profile:', error);
-    }
-    
-    // Also ensure user_stats record exists
-    const { error: statsError } = await supabase
-      .from('user_stats')
-      .upsert({
-        user_id: user.id,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' });
-
-    if (statsError) {
-      console.error('Error creating user stats:', statsError);
+      
+      // Check if it's a network error
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.error('Network error detected. Please check your internet connection and ensure you are accessing the site via HTTP (not HTTPS) for local development.');
+        toast.error('Network connection error. Please check your internet connection.');
+      } else {
+        console.error('Database error:', error);
+        toast.error('Failed to update user profile. Please try again.');
+      }
     }
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
       setLoading(true);
-      const redirectUrl = `${window.location.origin}/`;
+      console.log('Attempting sign up for:', email);
       
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: fullName,
+      const redirectUrl = `${window.location.protocol}//${window.location.host}/`;
+      
+      const { data, error } = await retryRequest(() => 
+        supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: redirectUrl,
+            data: {
+              full_name: fullName,
+            }
           }
-        }
-      });
+        })
+      );
       
       if (error) {
         console.error('Sign up error:', error);
@@ -118,7 +172,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error };
     } catch (err) {
       console.error('Sign up exception:', err);
-      toast.error('An unexpected error occurred');
+      if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+        toast.error('Network connection error. Please check your internet connection and try again.');
+      } else {
+        toast.error('An unexpected error occurred');
+      }
       return { error: err };
     } finally {
       setLoading(false);
@@ -130,10 +188,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       console.log('Attempting sign in for:', email);
       
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error } = await retryRequest(() =>
+        supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+      );
       
       if (error) {
         console.error('Sign in error:', error);
@@ -146,7 +206,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error };
     } catch (err) {
       console.error('Sign in exception:', err);
-      toast.error('An unexpected error occurred');
+      if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+        toast.error('Network connection error. Please check your internet connection and try again.');
+      } else {
+        toast.error('An unexpected error occurred');
+      }
       return { error: err };
     } finally {
       setLoading(false);
@@ -156,14 +220,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithProvider = async (provider: Provider) => {
     try {
       setLoading(true);
-      const redirectUrl = `${window.location.origin}/auth/callback`;
+      const redirectUrl = `${window.location.protocol}//${window.location.host}/auth/callback`;
       
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: redirectUrl,
-        }
-      });
+      const { error } = await retryRequest(() =>
+        supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: redirectUrl,
+          }
+        })
+      );
       
       if (error) {
         console.error(`Sign in with ${provider} error:`, error);
@@ -171,7 +237,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err) {
       console.error(`Sign in with ${provider} exception:`, err);
-      toast.error('An unexpected error occurred');
+      if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+        toast.error('Network connection error. Please check your internet connection and try again.');
+      } else {
+        toast.error('An unexpected error occurred');
+      }
     } finally {
       setLoading(false);
     }
@@ -179,7 +249,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await retryRequest(() => supabase.auth.signOut());
       if (error) {
         console.error('Sign out error:', error);
         toast.error(error.message);
@@ -189,7 +259,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err) {
       console.error('Sign out exception:', err);
-      toast.error('An unexpected error occurred');
+      if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+        toast.error('Network connection error. Please try again.');
+      } else {
+        toast.error('An unexpected error occurred');
+      }
     }
   };
 
@@ -199,15 +273,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error: new Error('User not authenticated') };
       }
 
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          username: data.username,
-          full_name: data.full_name,
-          avatar_url: data.avatar_url,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
+      const { error } = await retryRequest(() =>
+        supabase
+          .from('profiles')
+          .update({
+            username: data.username,
+            full_name: data.full_name,
+            avatar_url: data.avatar_url,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id)
+      );
 
       if (!error) {
         toast.success('Profile updated successfully');
@@ -216,6 +292,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error };
     } catch (err) {
       console.error('Update profile error:', err);
+      if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+        toast.error('Network connection error. Please check your internet connection and try again.');
+      }
       return { error: err };
     }
   };
