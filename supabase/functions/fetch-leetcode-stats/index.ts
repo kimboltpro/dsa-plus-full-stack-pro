@@ -1,104 +1,62 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.4.0";
+// Follow Deno Docs for HTTP handling
+// https://deno.land/manual@v1.35.0/runtime/http_server_apis
 
+import { createClient } from 'npm:@supabase/supabase-js@2';
+
+// CORS headers for browser requests
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
-interface LeetCodeQuery {
-  query: string;
-  variables: {
-    username: string;
-  };
-}
+// Create a Supabase client with the Auth context
+async function createSupabaseClient(req: Request) {
+  const authHeader = req.headers.get('Authorization');
 
-interface LeetCodeResponse {
-  data: {
-    matchedUser: {
-      username: string;
-      submitStats: {
-        acSubmissionNum: {
-          difficulty: string;
-          count: number;
-          submissions: number;
-        }[];
-      };
-      profile: {
-        ranking: number;
-        userAvatar: string;
-        realName: string;
-      };
-      userCalendar: {
-        submissionCalendar: string;
-      };
-    };
-  };
-}
+  // Get environment variables
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-serve(async (req: Request) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: corsHeaders
-    });
+  // Create client using auth header if present, otherwise use service role key
+  const supabase = createClient(
+    supabaseUrl,
+    authHeader ? supabaseAnonKey : supabaseServiceKey,
+    {
+      global: {
+        headers: authHeader ? { Authorization: authHeader } : {},
+      },
+    }
+  );
+
+  if (authHeader) {
+    // Get the user from the auth header
+    const { data, error } = await supabase.auth.getUser();
+    
+    if (error || !data?.user) {
+      throw new Error('Unauthorized: Invalid auth token');
+    }
+
+    return { supabase, user: data.user };
   }
-  
+
+  return { supabase, user: null };
+}
+
+// Handle OPTIONS request for CORS
+function handleOptions() {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
+// Fetch LeetCode user profile data
+async function fetchLeetCodeProfile(username: string) {
   try {
-    // Get username from the request
-    const url = new URL(req.url);
-    const username = url.searchParams.get('username');
-    
-    if (!username) {
-      return new Response(JSON.stringify({ 
-        error: "Username is required" 
-      }), {
-        status: 400,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        }
-      });
-    }
-    
-    // Set up Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Get user JWT from authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ 
-        error: "Authorization header required" 
-      }), {
-        status: 401,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        }
-      });
-    }
-    
-    // Get user details from the token
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !user) {
-      return new Response(JSON.stringify({ 
-        error: "Invalid token" 
-      }), {
-        status: 401,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        }
-      });
-    }
-    
-    // Prepare LeetCode GraphQL query
-    const leetCodeQuery: LeetCodeQuery = {
+    // GraphQL query for LeetCode
+    const query = {
       query: `
         query getUserProfile($username: String!) {
           matchedUser(username: $username) {
@@ -112,8 +70,6 @@ serve(async (req: Request) => {
             }
             profile {
               ranking
-              userAvatar
-              realName
             }
             userCalendar {
               submissionCalendar
@@ -121,129 +77,160 @@ serve(async (req: Request) => {
           }
         }
       `,
-      variables: {
-        username: username,
-      }
+      variables: { username }
     };
-    
-    // Send request to LeetCode GraphQL API
-    const leetCodeResponse = await fetch("https://leetcode.com/graphql", {
+
+    const response = await fetch("https://leetcode.com/graphql", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Referer": `https://leetcode.com/${username}`,
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
       },
-      body: JSON.stringify(leetCodeQuery)
+      body: JSON.stringify(query)
     });
-    
-    if (!leetCodeResponse.ok) {
-      return new Response(JSON.stringify({ 
-        error: `Failed to fetch LeetCode data: ${leetCodeResponse.statusText}` 
-      }), {
-        status: 500,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
+
+    if (!response.ok) {
+      throw new Error(`LeetCode API responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.data || !data.data.matchedUser) {
+      throw new Error(`LeetCode user "${username}" not found`);
+    }
+
+    return data.data.matchedUser;
+  } catch (error) {
+    console.error('Error fetching LeetCode data:', error);
+    throw error;
+  }
+}
+
+// Process LeetCode data
+function processLeetCodeData(data: any) {
+  // Extract submission stats
+  const submitStats = data.submitStats?.acSubmissionNum || [];
+  
+  let totalSolved = 0;
+  let easySolved = 0;
+  let mediumSolved = 0;
+  let hardSolved = 0;
+  let totalSubmissions = 0;
+  
+  submitStats.forEach((stat: any) => {
+    if (stat.difficulty === "All") {
+      totalSolved = stat.count;
+      totalSubmissions = stat.submissions;
+    } else if (stat.difficulty === "Easy") {
+      easySolved = stat.count;
+    } else if (stat.difficulty === "Medium") {
+      mediumSolved = stat.count;
+    } else if (stat.difficulty === "Hard") {
+      hardSolved = stat.count;
+    }
+  });
+  
+  // Calculate acceptance rate
+  const acceptanceRate = totalSubmissions > 0 ? (totalSolved / totalSubmissions) * 100 : 0;
+  
+  // Get submission calendar
+  const submissionCalendar = data.userCalendar?.submissionCalendar
+    ? JSON.parse(data.userCalendar.submissionCalendar)
+    : {};
+  
+  return {
+    username: data.username,
+    total_solved: totalSolved,
+    easy_solved: easySolved,
+    medium_solved: mediumSolved,
+    hard_solved: hardSolved,
+    acceptance_rate: acceptanceRate,
+    ranking: data.profile?.ranking || 0,
+    submission_calendar: submissionCalendar
+  };
+}
+
+Deno.serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return handleOptions();
+  }
+
+  try {
+    // Get username from query params
+    const url = new URL(req.url);
+    const username = url.searchParams.get("username");
+
+    if (!username) {
+      return new Response(
+        JSON.stringify({ error: "Username is required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
         }
-      });
+      );
     }
-    
-    const leetCodeData: LeetCodeResponse = await leetCodeResponse.json();
-    
-    if (!leetCodeData.data?.matchedUser) {
-      return new Response(JSON.stringify({ 
-        error: `LeetCode user '${username}' not found` 
-      }), {
-        status: 404,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
+
+    // Create Supabase client
+    const { supabase, user } = await createSupabaseClient(req);
+
+    if (!user) {
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
         }
-      });
+      );
     }
+
+    // Fetch LeetCode profile
+    const leetCodeData = await fetchLeetCodeProfile(username);
     
-    // Extract the data we need
-    const { matchedUser } = leetCodeData.data;
-    const { submitStats, profile, userCalendar } = matchedUser;
+    // Process the data
+    const processedData = processLeetCodeData(leetCodeData);
     
-    // Process submission numbers by difficulty
-    let easySolved = 0;
-    let mediumSolved = 0;
-    let hardSolved = 0;
-    let totalSolved = 0;
-    
-    submitStats.acSubmissionNum.forEach(item => {
-      if (item.difficulty === "Easy") easySolved = item.count;
-      if (item.difficulty === "Medium") mediumSolved = item.count;
-      if (item.difficulty === "Hard") hardSolved = item.count;
-      if (item.difficulty === "All") totalSolved = item.count;
-    });
-    
-    // Calculate acceptance rate (if available)
-    let acceptanceRate = 0;
-    const totalSubmissions = submitStats.acSubmissionNum.find(item => item.difficulty === "All")?.submissions || 0;
-    if (totalSubmissions > 0 && totalSolved > 0) {
-      acceptanceRate = (totalSolved / totalSubmissions) * 100;
-    }
-    
-    // Process the submission calendar
-    const submissionCalendar = userCalendar?.submissionCalendar 
-      ? JSON.parse(userCalendar.submissionCalendar) 
-      : {};
-    
-    // Prepare the data to save to our database
-    const leetCodeStats = {
-      user_id: user.id,
-      username: username,
-      total_solved: totalSolved,
-      easy_solved: easySolved,
-      medium_solved: mediumSolved,
-      hard_solved: hardSolved,
-      acceptance_rate: acceptanceRate,
-      ranking: profile?.ranking || 0,
-      submission_calendar: submissionCalendar,
-      last_fetched_at: new Date().toISOString()
-    };
-    
-    // Save or update the data in our database
-    const { data: savedData, error: saveError } = await supabase
-      .from('leetcode_stats')
-      .upsert(leetCodeStats)
+    // Save to database
+    const { data: savedData, error } = await supabase
+      .from("leetcode_stats")
+      .upsert({
+        user_id: user.id,
+        username: username,
+        total_solved: processedData.total_solved,
+        easy_solved: processedData.easy_solved,
+        medium_solved: processedData.medium_solved,
+        hard_solved: processedData.hard_solved,
+        acceptance_rate: processedData.acceptance_rate,
+        ranking: processedData.ranking,
+        submission_calendar: processedData.submission_calendar,
+        last_fetched_at: new Date().toISOString()
+      })
       .select()
       .single();
     
-    if (saveError) {
-      console.error("Database error:", saveError);
-      return new Response(JSON.stringify({ 
-        error: `Failed to save LeetCode data: ${saveError.message}` 
-      }), {
-        status: 500,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        }
-      });
+    if (error) {
+      console.error("Error saving LeetCode data:", error);
+      throw new Error(`Error saving LeetCode data: ${error.message}`);
     }
     
     // Return the saved data
-    return new Response(JSON.stringify(savedData), {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json'
+    return new Response(
+      JSON.stringify(savedData),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       }
-    });
+    );
     
   } catch (error) {
-    console.error("Error in fetch-leetcode-stats function:", error);
-    return new Response(JSON.stringify({ 
-      error: `Internal server error: ${error.message}` 
-    }), {
-      status: 500,
-      headers: { 
-        ...corsHeaders,
-        'Content-Type': 'application/json' 
+    console.error("Error:", error);
+    
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       }
-    });
+    );
   }
 });

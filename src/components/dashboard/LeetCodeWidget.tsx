@@ -27,6 +27,8 @@ const LeetCodeWidget = () => {
   }, [user]);
 
   const fetchExistingStats = async () => {
+    if (!user) return;
+
     try {
       setLoading(true);
       setError(null);
@@ -34,7 +36,7 @@ const LeetCodeWidget = () => {
       const { data, error } = await supabase
         .from('leetcode_stats')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .single();
 
       if (error) {
