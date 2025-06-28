@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
-import { Users, Trophy, UserPlus, CheckCircle, ArrowUpRight, Medal, Flame } from 'lucide-react';
+import { Users, Trophy, UserPlus, CheckCircle, ArrowUpRight, Medal, Flame as FireIcon } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 interface FriendsActivityProps {
@@ -146,7 +146,7 @@ const FriendsActivity: React.FC<FriendsActivityProps> = ({ isLoading }) => {
                       <div className="flex items-center">
                         <h4 className="font-medium text-gray-900">{friend.name}</h4>
                         <Badge variant="outline" className="ml-2 text-xs">
-                          <Flame className="h-3 w-3 mr-1 text-orange-500" />
+                          <FireIcon className="h-3 w-3 mr-1 text-orange-500" />
                           {friend.streak}
                         </Badge>
                       </div>

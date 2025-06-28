@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CheckCircle, Clock, AlertCircle, History } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { format, formatDistance } from 'date-fns';
+import { Button } from '@/components/ui/button';
 
 interface RecentActivityProps {
   activities?: any[];

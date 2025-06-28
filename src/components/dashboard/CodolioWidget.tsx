@@ -10,6 +10,7 @@ import { TrendingUp, Award, Link as LinkIcon, BarChart as BarChartIcon, RefreshC
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const CodolioWidget = () => {
   const { user } = useAuth();
