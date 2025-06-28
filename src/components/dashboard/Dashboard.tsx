@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
 import DashboardHeader from './DashboardHeader';
@@ -6,21 +6,71 @@ import StatsOverview from './StatsOverview';
 import QuickActions from './QuickActions';
 import ProgressChart from './ProgressChart';
 import RecentActivity from './RecentActivity';
-import CodolioWidget from './CodolioWidget';
+import LeetCodeWidget from './LeetCodeWidget';
 import FriendsActivity from './FriendsActivity';
 import { motion } from 'framer-motion';
 import { PageLoading } from '../common/LoadingSpinner';
+import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [userStats, setUserStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     // If user is not authenticated after loading, redirect to home
     if (!loading && !user) {
       navigate('/', { replace: true });
     }
+    
+    // Fetch user stats if user is authenticated
+    if (user) {
+      fetchUserStats();
+      
+      // Subscribe to real-time updates on user stats
+      const statsSubscription = supabase
+        .channel('user_stats_changes')
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'user_stats',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          fetchUserStats();
+        })
+        .subscribe();
+        
+      return () => {
+        statsSubscription.unsubscribe();
+      };
+    }
   }, [user, loading, navigate]);
+
+  const fetchUserStats = async () => {
+    if (!user) return;
+    
+    try {
+      setStatsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+        
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching user stats:', error);
+        return;
+      }
+      
+      setUserStats(data);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   if (loading) {
     return <PageLoading message="Loading your dashboard..." />;
@@ -78,10 +128,10 @@ const Dashboard = () => {
             variants={containerVariants}
           >
             <motion.div variants={itemVariants}>
-              <StatsOverview />
+              <StatsOverview userStats={userStats} isLoading={statsLoading} />
             </motion.div>
             <motion.div variants={itemVariants}>
-              <ProgressChart />
+              <ProgressChart isLoading={statsLoading} />
             </motion.div>
             <motion.div variants={itemVariants}>
               <RecentActivity />
@@ -96,7 +146,7 @@ const Dashboard = () => {
               <QuickActions />
             </motion.div>
             <motion.div variants={itemVariants}>
-              <CodolioWidget />
+              <LeetCodeWidget />
             </motion.div>
             <motion.div variants={itemVariants}>
               <FriendsActivity />
