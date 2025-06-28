@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
 import DashboardHeader from './DashboardHeader';
@@ -7,50 +7,21 @@ import QuickActions from './QuickActions';
 import ProgressChart from './ProgressChart';
 import RecentActivity from './RecentActivity';
 import LeetCodeWidget from './LeetCodeWidget';
-import { supabase } from '@/integrations/supabase/client';
-import { LoadingSpinner } from '../common/LoadingSpinner';
+import { PageLoading } from '../common/LoadingSpinner';
 
 const Dashboard = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [userStats, setUserStats] = useState(null);
-  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
+    // If user is not authenticated after loading, redirect to home
     if (!loading && !user) {
       navigate('/', { replace: true });
-    } else if (user) {
-      fetchUserStats();
     }
   }, [user, loading, navigate]);
 
-  const fetchUserStats = async () => {
-    try {
-      setStatsLoading(true);
-      const { data, error } = await supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching user stats:', error);
-      } else {
-        setUserStats(data);
-      }
-    } catch (err) {
-      console.error('Error:', err);
-    } finally {
-      setStatsLoading(false);
-    }
-  };
-
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 flex items-center justify-center">
-        <LoadingSpinner size="lg" text="Loading dashboard..." />
-      </div>
-    );
+    return <PageLoading message="Loading dashboard..." />;
   }
 
   if (!user) {
@@ -73,13 +44,13 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
-            <StatsOverview userStats={userStats} isLoading={statsLoading} />
+            <StatsOverview />
             <ProgressChart />
-            <LeetCodeWidget />
             <RecentActivity />
           </div>
           
           <div className="space-y-8">
+            <LeetCodeWidget />
             <QuickActions />
           </div>
         </div>
