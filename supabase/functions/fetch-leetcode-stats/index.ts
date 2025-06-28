@@ -1,4 +1,6 @@
 // LeetCode Stats Fetcher Edge Function
+// This function fetches statistics from LeetCode for a given username
+// and stores them in the database.
 
 import { createClient } from 'npm:@supabase/supabase-js@2.32.0';
 
@@ -36,10 +38,6 @@ query userPublicProfile($username: String!) {
         count
         submissions
       }
-    }
-    problemsSolvedBeatsStats {
-      difficulty
-      percentage
     }
   }
 }
