@@ -16,7 +16,6 @@ import NextProblemSuggestion from './NextProblemSuggestion';
 import CodingStreak from './CodingStreak';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import LeetCodeWidget from './LeetCodeWidget';
 
 interface UserStats {
   total_problems_solved: number;
@@ -331,7 +330,6 @@ const Dashboard = () => {
           
           <div className="space-y-8">
             <CodingStreak userStats={userStats} isLoading={statsLoading} />
-            <LeetCodeWidget />
             <NextProblemSuggestion isLoading={statsLoading} />
             <QuickActions />
           </div>

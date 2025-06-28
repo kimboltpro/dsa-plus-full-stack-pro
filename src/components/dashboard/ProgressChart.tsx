@@ -169,14 +169,14 @@ const ProgressChart = () => {
         <CardTitle>{view === 'topics' ? 'Topic-wise Progress' : 'Weekly Progress'}</CardTitle>
         <div className="flex gap-2">
           <Button 
-            variant={view === 'topics' ? 'default' : 'outline'} 
+            variant={view === 'topics' ? "default" : "outline"} 
             size="sm"
             onClick={() => setView('topics')}
           >
             Topics
           </Button>
           <Button 
-            variant={view === 'weekly' ? 'default' : 'outline'} 
+            variant={view === 'weekly' ? "default" : "outline"} 
             size="sm"
             onClick={() => setView('weekly')}
           >
