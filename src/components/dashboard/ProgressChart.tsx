@@ -32,7 +32,7 @@ const ProgressChart = () => {
       // Try to use the RPC function first
       try {
         const { data: rpcData, error: rpcError } = await supabase
-          .rpc('get_solved_problems_by_topic', { user_id: user?.id });
+          .rpc('get_solved_problems_by_topic', { user_id_param: user?.id });
         
         if (!rpcError) {
           setData(rpcData);
