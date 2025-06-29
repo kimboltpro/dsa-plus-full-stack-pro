@@ -27,6 +27,15 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Configure dependency optimization to handle TypeScript files
+  optimizeDeps: {
+    esbuildOptions: {
+      loader: {
+        '.ts': 'ts',
+        '.tsx': 'tsx',
+      },
+    },
+  },
   // Add environment variable handling
   define: {
     // Ensure proper environment variable access
