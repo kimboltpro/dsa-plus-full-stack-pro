@@ -27,8 +27,8 @@ export const useAuth = () => {
 // Utility function to retry failed requests
 const retryRequest = async <T>(
   operation: () => Promise<T>,
-  maxRetries: number = 3,
-  delay: number = 1000
+  maxRetries = 3,
+  delay = 1000
 ): Promise<T> => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
